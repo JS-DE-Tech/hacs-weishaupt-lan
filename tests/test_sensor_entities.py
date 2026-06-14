@@ -236,6 +236,33 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(attrs["probable_unit"], "°C")
         self.assertEqual(attrs["probable_scale"], 0.1)
 
+    def test_extended_wtc_candidate_uses_documented_address_and_scaling(self) -> None:
+        """Documented WTC candidates should stay extended and explicitly scaled."""
+        register = sensors.EXTENDED_EXPERIMENTAL_WTC_REGISTERS[0]
+        self.assertEqual(register.key, "wtc_candidate_pumpe_intern_sollleistung")
+        self.assertEqual(
+            (register.mi, register.mx, register.ox, register.os, register.vs),
+            (0x09, 0x01, 0x2619, 0x02, 1),
+        )
+        self.assertEqual(register.probable_unit, "%")
+        self.assertEqual(register.native_scale, 1.0)
+
+        coordinator = SimpleNamespace(
+            data={register.key: {"value_int": 57, "value_hex": "39"}}
+        )
+        entity = sensor.WeishauptExperimentalWtcSensorEntity(
+            coordinator=coordinator,
+            register=register,
+            entry=SimpleNamespace(entry_id="entry-123"),
+        )
+
+        self.assertEqual(
+            entity._attr_name,
+            "Kandidat Pumpenleistung Pumpe intern Sollleistung",
+        )
+        self.assertEqual(entity._attr_native_unit_of_measurement, "%")
+        self.assertEqual(entity.native_value, 57.0)
+
     def test_vpt_power_zero_is_valid_for_adaptive_value_sizes(self) -> None:
         """WTC VPT power should expose raw zero as 0.0 kW for VS=4 and VS=2."""
         sensor_def = sensor_by_key("wtc_waermeleistung_vpt")
@@ -569,6 +596,66 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
                 "entry-123_hk_betriebsart_aktuell",
             },
         )
+
+    def test_heating_circuit_candidates_are_optional_readonly_sensors(self) -> None:
+        """HK candidates should be added only by option and never as writable controls."""
+        disabled = heating_circuits.build_sensor_definitions(
+            [1, 2, 3],
+            {"system"},
+        )
+        enabled = heating_circuits.build_sensor_definitions(
+            [1, 2, 3],
+            {"system"},
+            include_experimental_hk_candidates=True,
+        )
+
+        disabled_keys = {item.key for item in disabled}
+        enabled_by_key = {item.key: item for item in enabled}
+        candidate_keys = {
+            "sg_hk1_candidate_mischerstellung_soll",
+            "sg_hk1_candidate_mischerstellung_ist",
+            "sg_hk1_candidate_pumpe_heizkreis",
+            "hk_candidate_mischerstellung_soll",
+            "hk_candidate_mischerstellung_ist",
+            "hk_candidate_pumpe_heizkreis",
+            "hk3_candidate_mischerstellung_soll",
+            "hk3_candidate_mischerstellung_ist",
+            "hk3_candidate_pumpe_heizkreis",
+        }
+
+        self.assertFalse(candidate_keys & disabled_keys)
+        self.assertTrue(candidate_keys <= set(enabled_by_key))
+        self.assertEqual(
+            (
+                enabled_by_key["sg_hk1_candidate_mischerstellung_soll"].mi,
+                enabled_by_key["sg_hk1_candidate_mischerstellung_soll"].mx,
+                enabled_by_key["sg_hk1_candidate_mischerstellung_soll"].ox,
+                enabled_by_key["sg_hk1_candidate_mischerstellung_soll"].os,
+                enabled_by_key["sg_hk1_candidate_mischerstellung_soll"].vs,
+            ),
+            (0x02, 0x00, 0x2536, 0x02, 1),
+        )
+        self.assertEqual(
+            (
+                enabled_by_key["hk3_candidate_pumpe_heizkreis"].mi,
+                enabled_by_key["hk3_candidate_pumpe_heizkreis"].mx,
+                enabled_by_key["hk3_candidate_pumpe_heizkreis"].ox,
+                enabled_by_key["hk3_candidate_pumpe_heizkreis"].os,
+                enabled_by_key["hk3_candidate_pumpe_heizkreis"].vs,
+            ),
+            (0x02, 0x02, 0x2546, 0x02, 1),
+        )
+        self.assertEqual(
+            enabled_by_key["hk_candidate_mischerstellung_soll"].unit,
+            "%",
+        )
+        for key in candidate_keys:
+            self.assertFalse(
+                heating_circuits.is_writable_operating_mode_definition(
+                    enabled_by_key[key]
+                )
+            )
+            self.assertNotIn(key, heating_circuits.NUMBER_SENSOR_KEYS)
 
     async def test_select_setup_keeps_writable_hk1_hk2_hk3_setpoints(self) -> None:
         """Writable operating-mode selects should remain for every detected circuit."""

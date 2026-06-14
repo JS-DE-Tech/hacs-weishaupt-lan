@@ -19,8 +19,10 @@ from .api import (
 )
 from .const import (
     CONF_DETECTED_HEATING_CIRCUIT_NAMES,
+    CONF_ENABLE_EXPERIMENTAL_HK_CANDIDATE_SENSORS,
     CONF_ENABLE_EXTENDED_EXPERIMENTAL_WTC_SENSORS,
     CONF_ENABLE_EXPERIMENTAL_WTC_SENSORS,
+    DEFAULT_ENABLE_EXPERIMENTAL_HK_CANDIDATE_SENSORS,
     DEFAULT_PASSWORD,
     DEFAULT_ENABLE_EXTENDED_EXPERIMENTAL_WTC_SENSORS,
     DEFAULT_ENABLE_EXPERIMENTAL_WTC_SENSORS,
@@ -98,6 +100,13 @@ def _data_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                     DEFAULT_ENABLE_EXTENDED_EXPERIMENTAL_WTC_SENSORS,
                 ),
             ): bool,
+            vol.Optional(
+                CONF_ENABLE_EXPERIMENTAL_HK_CANDIDATE_SENSORS,
+                default=defaults.get(
+                    CONF_ENABLE_EXPERIMENTAL_HK_CANDIDATE_SENSORS,
+                    DEFAULT_ENABLE_EXPERIMENTAL_HK_CANDIDATE_SENSORS,
+                ),
+            ): bool,
         }
     )
 
@@ -173,6 +182,13 @@ def _options_schema(defaults: dict[str, Any]) -> vol.Schema:
                     DEFAULT_ENABLE_EXTENDED_EXPERIMENTAL_WTC_SENSORS,
                 ),
             ): bool,
+            vol.Optional(
+                CONF_ENABLE_EXPERIMENTAL_HK_CANDIDATE_SENSORS,
+                default=defaults.get(
+                    CONF_ENABLE_EXPERIMENTAL_HK_CANDIDATE_SENSORS,
+                    DEFAULT_ENABLE_EXPERIMENTAL_HK_CANDIDATE_SENSORS,
+                ),
+            ): bool,
         }
     )
 
@@ -193,6 +209,12 @@ def _normalize_user_input(user_input: dict[str, Any]) -> dict[str, Any]:
         normalized.get(
             CONF_ENABLE_EXTENDED_EXPERIMENTAL_WTC_SENSORS,
             DEFAULT_ENABLE_EXTENDED_EXPERIMENTAL_WTC_SENSORS,
+        )
+    )
+    normalized[CONF_ENABLE_EXPERIMENTAL_HK_CANDIDATE_SENSORS] = bool(
+        normalized.get(
+            CONF_ENABLE_EXPERIMENTAL_HK_CANDIDATE_SENSORS,
+            DEFAULT_ENABLE_EXPERIMENTAL_HK_CANDIDATE_SENSORS,
         )
     )
     normalized[CONF_USE_DETECTED_HEATING_CIRCUIT_NAMES] = bool(

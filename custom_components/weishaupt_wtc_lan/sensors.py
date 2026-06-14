@@ -80,10 +80,14 @@ class ExperimentalWtcRegister:
     probable_unit: str | None = None
     probable_scale: float | None = None
     notes: str | None = None
+    display_name: str | None = None
+    native_scale: float | None = None
 
     @property
     def name(self) -> str:
         """Return the display name for this experimental register."""
+        if self.display_name is not None:
+            return self.display_name
         return (
             f"Experimental WTC {self.mi:02X}/{self.mx:02X}/"
             f"{self.ox:04X}/{self.os:02X} VS={self.vs}"
@@ -1379,6 +1383,99 @@ NETWORK_MAC_COMPONENT_SENSORS: list[WeishauptSensorDefinition] = [
 ]
 
 
+# Experimental read-only heating-circuit candidates from docs/manual-reference-map.md.
+# Meaning, scaling, and value size require field validation before promotion to
+# regular confirmed sensors. No write support is derived from these definitions.
+HK1_CANDIDATE_SENSORS: list[WeishauptSensorDefinition] = [
+    WeishauptSensorDefinition(
+        key="sg_hk1_candidate_mischerstellung_soll",
+        name="Kandidat Mischerstellung Soll",
+        mi=0x02,
+        mx=0x00,
+        ox=0x2536,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="candidate 02/00/2536/02",
+        icon="mdi:valve",
+        unit=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    WeishauptSensorDefinition(
+        key="sg_hk1_candidate_mischerstellung_ist",
+        name="Kandidat Mischerstellung Ist",
+        mi=0x02,
+        mx=0x00,
+        ox=0x254F,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="candidate 02/00/254F/02",
+        icon="mdi:valve",
+        unit=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    WeishauptSensorDefinition(
+        key="sg_hk1_candidate_pumpe_heizkreis",
+        name="Kandidat Pumpe Heizkreis",
+        mi=0x02,
+        mx=0x00,
+        ox=0x2546,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="candidate 02/00/2546/02",
+        icon="mdi:pump",
+        value_map=PUMPE_MAP,
+    ),
+]
+
+
+HK_CANDIDATE_SENSORS: list[WeishauptSensorDefinition] = [
+    WeishauptSensorDefinition(
+        key="hk_candidate_mischerstellung_soll",
+        name="HK Kandidat Mischerstellung Soll",
+        mi=0x02,
+        mx=0x01,
+        ox=0x2536,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.HK,
+        modbus_reg="candidate 02/01/2536/02",
+        icon="mdi:valve",
+        unit=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    WeishauptSensorDefinition(
+        key="hk_candidate_mischerstellung_ist",
+        name="HK Kandidat Mischerstellung Ist",
+        mi=0x02,
+        mx=0x01,
+        ox=0x254F,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.HK,
+        modbus_reg="candidate 02/01/254F/02",
+        icon="mdi:valve",
+        unit=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    WeishauptSensorDefinition(
+        key="hk_candidate_pumpe_heizkreis",
+        name="HK Kandidat Pumpe Heizkreis",
+        mi=0x02,
+        mx=0x01,
+        ox=0x2546,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.HK,
+        modbus_reg="candidate 02/01/2546/02",
+        icon="mdi:pump",
+        value_map=PUMPE_MAP,
+    ),
+]
+
+
 EXPERIMENTAL_WTC_HINT = "Unconfirmed dynamic WTC value"
 
 
@@ -1394,9 +1491,12 @@ def _experimental_wtc_register(
     probable_unit: str | None = None,
     probable_scale: float | None = None,
     notes: str | None = None,
+    display_name: str | None = None,
+    native_scale: float | None = None,
+    key: str | None = None,
 ) -> ExperimentalWtcRegister:
     return ExperimentalWtcRegister(
-        key=f"wtc_experimental_{mi:02x}_{mx:02x}_{ox:04x}_{os:02x}_{vs:02d}",
+        key=key or f"wtc_experimental_{mi:02x}_{mx:02x}_{ox:04x}_{os:02x}_{vs:02d}",
         mi=mi,
         mx=mx,
         ox=ox,
@@ -1407,6 +1507,8 @@ def _experimental_wtc_register(
         probable_unit=probable_unit,
         probable_scale=probable_scale,
         notes=notes,
+        display_name=display_name,
+        native_scale=native_scale,
     )
 
 
@@ -1483,7 +1585,30 @@ EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
 )
 
 
-EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = ()
+EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
+    _experimental_wtc_register(
+        0x09,
+        0x01,
+        0x2619,
+        0x02,
+        1,
+        key="wtc_candidate_pumpe_intern_sollleistung",
+        display_name="Kandidat Pumpenleistung Pumpe intern Sollleistung",
+        hint=(
+            "Experimental candidate from manual-reference mapping / WEM research. "
+            "Meaning and scaling require real-hardware validation. Read-only."
+        ),
+        confidence="experimental",
+        probable_unit=PERCENTAGE,
+        probable_scale=1.0,
+        native_scale=1.0,
+        notes=(
+            "Concrete candidate for internal pump modulation. Same address as a "
+            "curated raw WTC experimental register; this named entity is exposed "
+            "only through the extended experimental option."
+        ),
+    ),
+)
 EXTENDED_EXPERIMENTAL_WTC_MAX_ENTITIES = 100
 
 

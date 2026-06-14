@@ -9,6 +9,8 @@ import re
 
 from .const import NETWORK_DEVICE_SUFFIX
 from .sensors import (
+    HK1_CANDIDATE_SENSORS,
+    HK_CANDIDATE_SENSORS,
     HK_SENSORS,
     NETWORK_SENSORS,
     SG_SENSORS,
@@ -69,6 +71,9 @@ HK1_SENSOR_KEYS = {
     "sg_vorlaufsolltemperatur_sonderniveau",
     "sg_vorlaufsolltemperatur_aktuell",
     "sg_vorlaufisttemperatur",
+    "sg_hk1_candidate_mischerstellung_soll",
+    "sg_hk1_candidate_mischerstellung_ist",
+    "sg_hk1_candidate_pumpe_heizkreis",
 }
 
 WARM_WATER_SENSOR_KEYS = {
@@ -533,11 +538,18 @@ def _offset_modbus_register(register: str, offset: int) -> str:
 
 
 def build_hk_sensor_definitions(
-    circuit_number: int, mx: int
+    circuit_number: int,
+    mx: int,
+    *,
+    include_experimental_candidates: bool = False,
 ) -> list[WeishauptSensorDefinition]:
     """Build sensor definitions for an external heating circuit."""
+    base_definitions = list(HK_SENSORS)
+    if include_experimental_candidates:
+        base_definitions.extend(HK_CANDIDATE_SENSORS)
+
     if circuit_number == 2:
-        return list(HK_SENSORS)
+        return base_definitions
 
     if circuit_number != 3:
         raise ValueError(f"Unsupported external heating circuit HK{circuit_number}")
@@ -548,15 +560,21 @@ def build_hk_sensor_definitions(
             key=sensor_def.key.replace("hk_", "hk3_", 1),
             name=sensor_def.name.replace("HK ", "HK3 ", 1),
             mx=mx,
-            modbus_reg=_offset_modbus_register(sensor_def.modbus_reg, HK3_MODBUS_OFFSET),
+            modbus_reg=(
+                sensor_def.modbus_reg.replace("/01/", "/02/")
+                if sensor_def.modbus_reg.startswith("candidate ")
+                else _offset_modbus_register(sensor_def.modbus_reg, HK3_MODBUS_OFFSET)
+            ),
         )
-        for sensor_def in HK_SENSORS
+        for sensor_def in base_definitions
     ]
 
 
 def build_sensor_definitions(
     active_heating_circuits: list[int],
     active_device_groups: set[str] | None = None,
+    *,
+    include_experimental_hk_candidates: bool = False,
 ) -> list[WeishauptSensorDefinition]:
     """Build all sensor definitions for detected heating circuits."""
     active_device_groups = active_device_groups or {
@@ -570,6 +588,8 @@ def build_sensor_definitions(
         for sensor_def in SG_SENSORS
         if logical_group_for_sensor(sensor_def) in active_device_groups
     ]
+    if include_experimental_hk_candidates:
+        sensor_definitions.extend(HK1_CANDIDATE_SENSORS)
 
     if DEVICE_GROUP_WTC in active_device_groups:
         sensor_definitions.extend(WTC_SENSORS)
@@ -577,9 +597,21 @@ def build_sensor_definitions(
         sensor_definitions.extend(SOL_SENSORS)
 
     if 2 in active_heating_circuits:
-        sensor_definitions.extend(build_hk_sensor_definitions(2, 0x01))
+        sensor_definitions.extend(
+            build_hk_sensor_definitions(
+                2,
+                0x01,
+                include_experimental_candidates=include_experimental_hk_candidates,
+            )
+        )
     if 3 in active_heating_circuits:
-        sensor_definitions.extend(build_hk_sensor_definitions(3, 0x02))
+        sensor_definitions.extend(
+            build_hk_sensor_definitions(
+                3,
+                0x02,
+                include_experimental_candidates=include_experimental_hk_candidates,
+            )
+        )
 
     return sensor_definitions
 

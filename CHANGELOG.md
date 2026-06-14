@@ -2,7 +2,11 @@
 
 ## Unreleased
 
+### Added
+- Added documented experimental read-only candidate sensors for field validation of WTC and heating-circuit register candidates.
+
 ### Documentation
+- Clarified that experimental candidate sensors remain unconfirmed until validated against real hardware.
 - Added manual-reference mapping between Weishaupt information menu numbers, existing Home Assistant entities, and CanApiJson addresses.
 - Added research candidates derived from external WEM code mappings for later read-only correlation.
 - Documented real-hardware validation of Systemgeraet date/time registers.

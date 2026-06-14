@@ -198,6 +198,9 @@ class ConfigFlowTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn("enable_experimental_wtc_sensors", schema)
         self.assertIn("enable_extended_experimental_wtc_sensors", schema)
+        self.assertIn(
+            "enable_experimental_heating_circuit_candidate_sensors", schema
+        )
         self.assertFalse(
             config_flow._normalize_user_input(
                 {"scan_interval": 30}
@@ -207,6 +210,11 @@ class ConfigFlowTests(unittest.IsolatedAsyncioTestCase):
             config_flow._normalize_user_input(
                 {"scan_interval": 30}
             )["enable_extended_experimental_wtc_sensors"]
+        )
+        self.assertFalse(
+            config_flow._normalize_user_input(
+                {"scan_interval": 30}
+            )["enable_experimental_heating_circuit_candidate_sensors"]
         )
 
     def test_scan_interval_minimum_is_thirty_seconds(self) -> None:
@@ -241,12 +249,16 @@ class ConfigFlowTests(unittest.IsolatedAsyncioTestCase):
                 "scan_interval": 60,
                 "enable_experimental_wtc_sensors": True,
                 "enable_extended_experimental_wtc_sensors": True,
+                "enable_experimental_heating_circuit_candidate_sensors": True,
                 "use_detected_heating_circuit_names": False,
             }
         )
 
         self.assertTrue(result["data"]["enable_experimental_wtc_sensors"])
         self.assertTrue(result["data"]["enable_extended_experimental_wtc_sensors"])
+        self.assertTrue(
+            result["data"]["enable_experimental_heating_circuit_candidate_sensors"]
+        )
         self.assertFalse(result["data"]["use_detected_heating_circuit_names"])
 
     async def test_initial_names_step_persists_detected_names_separately(self) -> None:

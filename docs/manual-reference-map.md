@@ -15,6 +15,10 @@ candidates only. Candidate values must be validated by targeted correlation
 snapshots before they become regular sensors. No write support is derived from
 `wem_codes.py`.
 
+Some concrete candidates are exposed as experimental read-only sensors for
+field validation. Values, scaling, value size, and interpretation must still be
+verified on real hardware before they can be promoted to confirmed sensors.
+
 Status values used in this document:
 
 - `confirmed`: implemented in the integration and documented as confirmed or
@@ -45,9 +49,9 @@ Heating-circuit mappings use the current circuit model:
 | `1.6.4` | Heizkreis 1 > Info > Raumsolltemperatur | Current room target temperature | `sg_raumsolltemperatur_aktuell` (`Raumsolltemperatur aktuell`) | `02/00/2558/02 VS=2` | confirmed | Scale `0.1 C`, signed. |
 | `1.6.5` | Heizkreis 1 > Info > Vorlaufsolltemperatur | Current flow target temperature | `sg_vorlaufsolltemperatur_aktuell` (`Vorlaufsolltemperatur aktuell`) | `02/00/2559/02 VS=2` | confirmed | Scale `0.1 C`, signed. |
 | `1.6.6` | Heizkreis 1 > Info > Vorlaufisttemperatur | Current flow temperature | `sg_vorlaufisttemperatur` (`Vorlaufisttemperatur`) | `02/00/2507/02 VS=2` | confirmed | Scale `0.1 C`, signed. |
-| `1.6.7` | Heizkreis 1 > Info > Mischerstellung Soll | Mixer target position | none | `02/00/2536/02` | experimental candidate | Candidate from the `wem_codes.py` request context. Try `VS=1` first for percent-like values; `VS=2` may be needed. |
-| `1.6.8` | Heizkreis 1 > Info > Mischerstellung Ist | Mixer actual position | none | `02/00/254F/02` | experimental candidate | Candidate from the `wem_codes.py` request context. Try `VS=1` first for percent-like values; `VS=2` may be needed. |
-| `1.6.9` | Heizkreis 1 > Info > Pumpe Heizkreis | Heating-circuit pump state | none | `02/00/2546/02` | experimental candidate | Candidate from the `wem_codes.py` request context. `VS=1` may be sufficient for on/off; final VS needs hardware confirmation. |
+| `1.6.7` | Heizkreis 1 > Info > Mischerstellung Soll | Mixer target position | `sg_hk1_candidate_mischerstellung_soll` (`Kandidat Mischerstellung Soll`) | `02/00/2536/02 VS=1` | experimental candidate | Exposed only when experimental HK candidate sensors are enabled. `VS=2` may still be needed on some hardware and must be validated. |
+| `1.6.8` | Heizkreis 1 > Info > Mischerstellung Ist | Mixer actual position | `sg_hk1_candidate_mischerstellung_ist` (`Kandidat Mischerstellung Ist`) | `02/00/254F/02 VS=1` | experimental candidate | Exposed only when experimental HK candidate sensors are enabled. `VS=2` may still be needed on some hardware and must be validated. |
+| `1.6.9` | Heizkreis 1 > Info > Pumpe Heizkreis | Heating-circuit pump state | `sg_hk1_candidate_pumpe_heizkreis` (`Kandidat Pumpe Heizkreis`) | `02/00/2546/02 VS=1` | experimental candidate | Exposed only when experimental HK candidate sensors are enabled. `VS=1` is plausible for on/off; final VS needs hardware confirmation. |
 | `1.6.10` | Heizkreis 1 > Info > Korrektur Aufheizoptimierung | Heat-up optimization correction | none | unknown | missing | No current confirmed entity or candidate address. |
 | `1.6.11` | Heizkreis 1 > Info > Korrektur Absenkoptimierung | Setback optimization correction | none | unknown | missing | No current confirmed entity or candidate address. |
 
@@ -61,9 +65,9 @@ Heating-circuit mappings use the current circuit model:
 | `1.6.4` | Heizkreis 2 > Info > Raumsolltemperatur | Current room target temperature | `hk_raumsolltemperatur_aktuell` (`HK Raumsolltemperatur aktuell`) | `02/01/2558/02 VS=2` | confirmed | Scale `0.1 C`, signed. |
 | `1.6.5` | Heizkreis 2 > Info > Vorlaufsolltemperatur | Current flow target temperature | `hk_vorlaufsolltemperatur_aktuell` (`HK Vorlaufsolltemperatur aktuell`) | `02/01/2559/02 VS=2` | confirmed | Scale `0.1 C`, signed. |
 | `1.6.6` | Heizkreis 2 > Info > Vorlaufisttemperatur | Current flow temperature | `hk_vorlaufisttemperatur` (`HK Vorlaufisttemperatur`) | `02/01/2507/02 VS=2` | confirmed | Scale `0.1 C`, signed. |
-| `1.6.7` | Heizkreis 2 > Info > Mischerstellung Soll | Mixer target position | none | `02/01/2536/02` | experimental candidate | Candidate from the `wem_codes.py` request context. Try `VS=1` first for percent-like values; `VS=2` may be needed. |
-| `1.6.8` | Heizkreis 2 > Info > Mischerstellung Ist | Mixer actual position | none | `02/01/254F/02` | experimental candidate | Candidate from the `wem_codes.py` request context. Try `VS=1` first for percent-like values; `VS=2` may be needed. |
-| `1.6.9` | Heizkreis 2 > Info > Pumpe Heizkreis | Heating-circuit pump state | none | `02/01/2546/02` | experimental candidate | Candidate from the `wem_codes.py` request context. `VS=1` may be sufficient for on/off; final VS needs hardware confirmation. |
+| `1.6.7` | Heizkreis 2 > Info > Mischerstellung Soll | Mixer target position | `hk_candidate_mischerstellung_soll` (`HK Kandidat Mischerstellung Soll`) | `02/01/2536/02 VS=1` | experimental candidate | Exposed only when experimental HK candidate sensors are enabled. `VS=2` may still be needed on some hardware and must be validated. |
+| `1.6.8` | Heizkreis 2 > Info > Mischerstellung Ist | Mixer actual position | `hk_candidate_mischerstellung_ist` (`HK Kandidat Mischerstellung Ist`) | `02/01/254F/02 VS=1` | experimental candidate | Exposed only when experimental HK candidate sensors are enabled. `VS=2` may still be needed on some hardware and must be validated. |
+| `1.6.9` | Heizkreis 2 > Info > Pumpe Heizkreis | Heating-circuit pump state | `hk_candidate_pumpe_heizkreis` (`HK Kandidat Pumpe Heizkreis`) | `02/01/2546/02 VS=1` | experimental candidate | Exposed only when experimental HK candidate sensors are enabled. `VS=1` is plausible for on/off; final VS needs hardware confirmation. |
 | `1.6.10` | Heizkreis 2 > Info > Korrektur Aufheizoptimierung | Heat-up optimization correction | none | unknown | missing | No current confirmed entity or candidate address. |
 | `1.6.11` | Heizkreis 2 > Info > Korrektur Absenkoptimierung | Setback optimization correction | none | unknown | missing | No current confirmed entity or candidate address. |
 
@@ -77,9 +81,9 @@ Heating-circuit mappings use the current circuit model:
 | `1.6.4` | Heizkreis 3 > Info > Raumsolltemperatur | Current room target temperature | `hk3_raumsolltemperatur_aktuell` (`HK3 Raumsolltemperatur aktuell`) | `02/02/2558/02 VS=2` | confirmed | Built from the HK definition with `MX=0x02`; scale `0.1 C`, signed. |
 | `1.6.5` | Heizkreis 3 > Info > Vorlaufsolltemperatur | Current flow target temperature | `hk3_vorlaufsolltemperatur_aktuell` (`HK3 Vorlaufsolltemperatur aktuell`) | `02/02/2559/02 VS=2` | confirmed | Built from the HK definition with `MX=0x02`; scale `0.1 C`, signed. |
 | `1.6.6` | Heizkreis 3 > Info > Vorlaufisttemperatur | Current flow temperature | `hk3_vorlaufisttemperatur` (`HK3 Vorlaufisttemperatur`) | `02/02/2507/02 VS=2` | confirmed | Built from the HK definition with `MX=0x02`; scale `0.1 C`, signed. |
-| `1.6.7` | Heizkreis 3 > Info > Mischerstellung Soll | Mixer target position | none | `02/02/2536/02` | experimental candidate | Candidate from the `wem_codes.py` request context. Try `VS=1` first for percent-like values; `VS=2` may be needed. |
-| `1.6.8` | Heizkreis 3 > Info > Mischerstellung Ist | Mixer actual position | none | `02/02/254F/02` | experimental candidate | Candidate from the `wem_codes.py` request context. Try `VS=1` first for percent-like values; `VS=2` may be needed. |
-| `1.6.9` | Heizkreis 3 > Info > Pumpe Heizkreis | Heating-circuit pump state | none | `02/02/2546/02` | experimental candidate | Candidate from the `wem_codes.py` request context. `VS=1` may be sufficient for on/off; final VS needs hardware confirmation. |
+| `1.6.7` | Heizkreis 3 > Info > Mischerstellung Soll | Mixer target position | `hk3_candidate_mischerstellung_soll` (`HK3 Kandidat Mischerstellung Soll`) | `02/02/2536/02 VS=1` | experimental candidate | Exposed only when experimental HK candidate sensors are enabled. `VS=2` may still be needed on some hardware and must be validated. |
+| `1.6.8` | Heizkreis 3 > Info > Mischerstellung Ist | Mixer actual position | `hk3_candidate_mischerstellung_ist` (`HK3 Kandidat Mischerstellung Ist`) | `02/02/254F/02 VS=1` | experimental candidate | Exposed only when experimental HK candidate sensors are enabled. `VS=2` may still be needed on some hardware and must be validated. |
+| `1.6.9` | Heizkreis 3 > Info > Pumpe Heizkreis | Heating-circuit pump state | `hk3_candidate_pumpe_heizkreis` (`HK3 Kandidat Pumpe Heizkreis`) | `02/02/2546/02 VS=1` | experimental candidate | Exposed only when experimental HK candidate sensors are enabled. `VS=1` is plausible for on/off; final VS needs hardware confirmation. |
 | `1.6.10` | Heizkreis 3 > Info > Korrektur Aufheizoptimierung | Heat-up optimization correction | none | unknown | missing | No current confirmed entity or candidate address. |
 | `1.6.11` | Heizkreis 3 > Info > Korrektur Absenkoptimierung | Setback optimization correction | none | unknown | missing | No current confirmed entity or candidate address. |
 
@@ -183,7 +187,7 @@ Older WEM/CAN group hints mentioned by the request:
 |---|---|---|---|---|---|
 | `1.2.1.3` | Sollleistung WE0 | none | unknown | experimental candidate | Possible percentage-based requested output; do not map to kW `wtc_waermeleistung_vpt`. |
 | `1.2.1.4` | Leistung / Istleistung | none | unknown | experimental candidate | Possible percentage-based actual output; do not map to kW `wtc_waermeleistung_vpt`. |
-| `1.2.1.3` | Pumpenleistung Pumpe intern Sollleistung WE0 | `wtc_experimental_09_01_2619_02_01` | `09/01/2619/02 VS=1` | experimental candidate | Existing curated experimental register is probably internal pump modulation, unit `%`, but not confirmed as manual Sollleistung. |
+| `1.2.1.3` | Pumpenleistung Pumpe intern Sollleistung WE0 | `wtc_candidate_pumpe_intern_sollleistung` (`Kandidat Pumpenleistung Pumpe intern Sollleistung`) | `09/01/2619/02 VS=1` | experimental candidate | Exposed through the extended experimental WTC option for field validation. Same address remains available as a curated raw diagnostic candidate. |
 | n/a | Pumpenleistung Pumpe intern Elektrische Leistung WE0 | none | unknown | experimental candidate | Candidate label only from request context. |
 | `1.2.1.4` | Geblaese-Ansteuersignal Aktuell WE0 | none | unknown | experimental candidate | Candidate label only from request context. |
 | `1.2.1.4` | Geblaesedrehzahl Aktuell WE0 | none | unknown | experimental candidate | Candidate label only from request context. |

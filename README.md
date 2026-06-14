@@ -706,6 +706,10 @@ The bundled discovery tools:
 
 Additional read-only WTC, heating-circuit, domestic-hot-water, and diagnostic parameters are currently being investigated.
 
+Experimental candidate sensors can be enabled from the integration options for
+field validation. Candidate sensors are read-only and remain unconfirmed until
+they are correlated against real hardware.
+
 Portal screenshots and structured local discovery scans indicate additional potentially useful values, including:
 
 - burner starts

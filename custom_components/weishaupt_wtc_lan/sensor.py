@@ -529,6 +529,8 @@ class WeishauptExperimentalWtcSensorEntity(
 
         self._attr_unique_id = f"{entry.entry_id}_{register.key}"
         self._attr_name = register.name
+        if register.native_scale is not None:
+            self._attr_native_unit_of_measurement = register.probable_unit
 
         from homeassistant.helpers.entity import EntityCategory
 
@@ -572,8 +574,8 @@ class WeishauptExperimentalWtcSensorEntity(
         self.async_write_ha_state()
 
     @property
-    def native_value(self) -> int | None:
-        """Return the signed raw value."""
+    def native_value(self) -> int | float | None:
+        """Return the signed raw or explicitly scaled candidate value."""
         if not self.available:
             return None
         data = self._data()
@@ -582,7 +584,10 @@ class WeishauptExperimentalWtcSensorEntity(
         raw_value = data.get("value_int")
         if raw_value is None:
             return None
-        return _signed_value(raw_value, self._register.vs)
+        signed_value = _signed_value(raw_value, self._register.vs)
+        if self._register.native_scale is not None:
+            return round(signed_value * self._register.native_scale, 2)
+        return signed_value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
