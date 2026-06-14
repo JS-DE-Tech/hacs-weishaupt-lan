@@ -554,6 +554,9 @@ Always verify write operations directly on the heating system after changing ope
 ## Confirmed CanApiJson Runtime Registers
 
 The following registers were confirmed through real read-only API responses on tested hardware.
+Manual information menu numbers are cross-referenced to Home Assistant entities
+and CanApiJson addresses in
+[`docs/manual-reference-map.md`](docs/manual-reference-map.md).
 
 | Value | MI | MX | OX | OS | VS | Scaling |
 |---|---:|---:|---:|---:|---:|---|

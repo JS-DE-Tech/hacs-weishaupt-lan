@@ -99,6 +99,10 @@ The integration uses the following fields:
 | `OS` | Object sub-index |
 | `VS` | Value size in bytes |
 
+Manual information menu references are mapped to the current Home Assistant
+entities and CanApiJson addresses in
+[manual-reference-map.md](manual-reference-map.md).
+
 Example request:
 
 ```text
@@ -462,6 +466,11 @@ Validated date field order on tested hardware:
 | `sg_datum_jahr` | `01/00/2563/02` | year offset, for example `26` -> `2026` |
 | `sg_datum_monat` | `01/00/2563/03` | month |
 | `sg_datum_tag` | `01/00/2563/04` | day |
+
+These Systemgeraet date/time component registers are confirmed readable via
+`SRC=DDC`. Real-hardware write attempts using normal `CMD_SET` for the year,
+minute, and combined hour/minute objects returned `CMD_ERROR`; automatic
+Systemgeraet time synchronization is therefore not implemented.
 
 No extra protocol reads are added for these derived sensors. `sg_device_date`
 and `sg_device_clock_time` are enabled by default. The raw component entities

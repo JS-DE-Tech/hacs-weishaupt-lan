@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Documentation
+- Added manual-reference mapping between Weishaupt information menu numbers, existing Home Assistant entities, and CanApiJson addresses.
+- Added research candidates derived from external WEM code mappings for later read-only correlation.
+- Documented real-hardware validation of Systemgeraet date/time registers.
+- Confirmed Systemgeraet date/time registers as readable via SRC=DDC.
+- Documented rejected write attempts for year, minute, and combined hour/minute.
+- Marked automatic Systemgeraet time synchronization as not implemented until a writable time-setting mechanism is discovered.
+
 ## 0.4.6 - 2026-06-12
 
 ### Changed
