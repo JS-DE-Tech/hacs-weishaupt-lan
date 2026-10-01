@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import importlib.util
+import copy
+import itertools
 from pathlib import Path
 from types import SimpleNamespace
 import sys
 import types
 import unittest
+from unittest.mock import AsyncMock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -67,6 +70,14 @@ class SelectEntity:
 
 select_component.SelectEntity = SelectEntity
 sys.modules["homeassistant.components.select"] = select_component
+
+number_component = types.ModuleType("homeassistant.components.number")
+number_component.NumberEntity = type("NumberEntity", (), {})
+number_component.NumberMode = SimpleNamespace(SLIDER="slider")
+sys.modules["homeassistant.components.number"] = number_component
+button_component = types.ModuleType("homeassistant.components.button")
+button_component.ButtonEntity = type("ButtonEntity", (), {})
+sys.modules["homeassistant.components.button"] = button_component
 
 config_entries = types.ModuleType("homeassistant.config_entries")
 config_entries.ConfigEntry = object
@@ -151,6 +162,12 @@ sensor = load_module(
 select_platform = load_module(
     "custom_components.weishaupt_wtc_lan.select", PACKAGE_ROOT / "select.py"
 )
+number_platform = load_module(
+    "custom_components.weishaupt_wtc_lan.number", PACKAGE_ROOT / "number.py"
+)
+button_platform = load_module(
+    "custom_components.weishaupt_wtc_lan.button", PACKAGE_ROOT / "button.py"
+)
 
 
 def sensor_by_key(key: str):
@@ -163,14 +180,210 @@ class DeviceRegistry:
 
     def __init__(self) -> None:
         self.created: list[dict] = []
+        self.devices: dict[tuple[str, tuple[str, str]], SimpleNamespace] = {}
 
     def async_get_or_create(self, **kwargs):
-        self.created.append(kwargs)
-        return kwargs
+        assert "via_device" not in kwargs
+        owner = kwargs["config_entry_id"]
+        identifier = next(iter(kwargs["identifiers"]))
+        key = (owner, identifier)
+        parent_id = kwargs.get("via_device_id")
+        if parent_id is not None:
+            assert isinstance(parent_id, str)
+            assert any(
+                device.id == parent_id and device.config_entry_id == owner
+                for device in self.devices.values()
+            )
+        if key not in self.devices:
+            self.created.append(kwargs)
+            self.devices[key] = SimpleNamespace(
+                id=f"registry-{len(self.devices)}",
+                config_entry_id=owner,
+                area_id=None,
+                name_by_user=None,
+                disabled_by=None,
+                **{k: v for k, v in kwargs.items() if k != "config_entry_id"},
+            )
+        device = self.devices[key]
+        for field, value in kwargs.items():
+            setattr(device, field, value)
+        return device
+
+    def async_get_device_by_identifier(self, identifier, config_entry_id):
+        return self.devices.get((config_entry_id, identifier))
 
 
 class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
     """Test regular and experimental sensor behavior."""
+
+    def setUp(self) -> None:
+        self.registry = DeviceRegistry()
+        sensor.dr.async_get = lambda hass: self.registry
+
+    def _migration_fixture(self):
+        definitions = heating_circuits.build_sensor_definitions(
+            [1, 2, 3], {"system", "wtc", "ww"}
+        )
+        definitions.append(next(
+            item for item in sensors.NETWORK_SENSORS
+            if item.key == "network_ip_address"
+        ))
+        register = sensors.EXPERIMENTAL_WTC_REGISTERS[0]
+        data = {
+            "sg_aussentemperatur": {"value_int": 125, "value_hex": "007d"},
+            "wtc_anlagendruck": {"value_int": 149, "value_hex": "0095"},
+            "sg_systembetriebsart": {"value_int": 3, "value_hex": "03"},
+            "sg_betriebsart_hk1_vorgabe": {"value_int": 2, "value_hex": "02"},
+            "hk_betriebsart_vorgabe": {"value_int": 2, "value_hex": "02"},
+            "hk3_betriebsart_vorgabe": {"value_int": 2, "value_hex": "02"},
+            "sg_wwsolltemperatur_normal": {"value_int": 550, "value_hex": "0226"},
+            "sg_wwsolltemperatur_absenk": {"value_int": 400, "value_hex": "0190"},
+            "network_ip_address": {"value_int": 0xC0A8012A, "value_hex": "c0a8012a"},
+            register.key: {"value_int": 0, "value_hex": "00" * register.vs},
+        }
+        coordinator = SimpleNamespace(
+            sensor_definitions=definitions,
+            experimental_wtc_registers=[register],
+            extended_experimental_wtc_registers=[],
+            heating_circuit_names={1: "Custom HK1", 2: "Custom HK2", 3: "Custom HK3"},
+            data=data,
+            async_enqueue_write=AsyncMock(),
+        )
+        entry = SimpleNamespace(
+            entry_id="entry-123", data={"host": "wem-sg.local"},
+            options={"scan_interval": 60, "hk1_name": "Custom HK1"},
+        )
+        return coordinator, entry
+
+    async def _add_migration_entities(self, coordinator, entry, platforms):
+        hass = SimpleNamespace(data={"weishaupt_wtc_lan": {entry.entry_id: coordinator}})
+        added = []
+        for platform in platforms:
+            def add_entities(entities):
+                for entity in entities:
+                    info = entity.device_info
+                    self.assertNotIn("via_device", info)
+                    device = self.registry.async_get_or_create(
+                        config_entry_id=entry.entry_id, **info
+                    )
+                    if info["identifiers"] == {sensor._system_device_identifier(entry.entry_id)}:
+                        self.assertNotIn("via_device_id", info)
+                    else:
+                        self.assertEqual(info["via_device_id"], coordinator.system_device_id)
+                        self.assertNotEqual(device.id, coordinator.system_device_id)
+                    added.append(entity)
+            await platform.async_setup_entry(hass, entry, add_entities)
+        return added
+
+    async def test_first_setup_registers_real_parent_id_in_every_platform_order(self):
+        """Any platform order must not depend on sensor being first."""
+        for platforms in itertools.permutations(
+            [sensor, select_platform, number_platform, button_platform]
+        ):
+            with self.subTest(order=[item.__name__ for item in platforms]):
+                self.registry = DeviceRegistry()
+                coordinator, entry = self._migration_fixture()
+                entities = await self._add_migration_entities(coordinator, entry, platforms)
+                root = self.registry.async_get_device_by_identifier(
+                    ("weishaupt_wtc_lan", "entry-123_sg"), entry.entry_id
+                )
+                self.assertEqual(coordinator.system_device_id, root.id)
+                self.assertNotEqual(root.id, "entry-123_sg")
+                unique_ids = [entity._attr_unique_id for entity in entities]
+                self.assertEqual(len(unique_ids), len(set(unique_ids)))
+                self.assertEqual(len(self.registry.devices), 8)
+
+    async def test_existing_devices_and_entities_survive_reload_with_user_settings(self):
+        """Reuse registry IDs, configured names and entity settings across reloads."""
+        coordinator, entry = self._migration_fixture()
+        # Simulate HA's persisted registry, including a conflicting identifier
+        # owned by another ConfigEntry.
+        foreign = self.registry.async_get_or_create(
+            config_entry_id="foreign-entry",
+            identifiers={("weishaupt_wtc_lan", "entry-123_sg")},
+        )
+        root = self.registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={("weishaupt_wtc_lan", "entry-123_sg")},
+        )
+        for suffix in ("hk1", "hk", "hk3", "ww", "wtc", "network", "wtc_experimental"):
+            self.registry.async_get_or_create(
+                config_entry_id=entry.entry_id,
+                identifiers={("weishaupt_wtc_lan", f"entry-123_{suffix}")},
+                via_device_id=root.id,
+            )
+        for device in self.registry.devices.values():
+            device.area_id = "boiler-room"
+            device.name_by_user = "User device name"
+            device.disabled_by = "user"
+        registry_before = copy.deepcopy(self.registry.devices)
+        config_before = copy.deepcopy((entry.data, entry.options))
+        entities_before = {
+            "entry-123_wtc_anlagendruck": {
+                "entity_id": "sensor.existing_pressure", "disabled_by": "user",
+                "name": "Custom pressure", "device_id": self.registry.devices[
+                    (entry.entry_id, ("weishaupt_wtc_lan", "entry-123_wtc"))
+                ].id,
+            },
+            "entry-123_sg_wwsolltemperatur_normal_number": {
+                "entity_id": "number.existing_ww_target", "disabled_by": None,
+                "name": "Custom target", "device_id": self.registry.devices[
+                    (entry.entry_id, ("weishaupt_wtc_lan", "entry-123_ww"))
+                ].id,
+            },
+        }
+        entity_registry = copy.deepcopy(entities_before)
+        expected_devices = len(self.registry.devices)
+        for _ in range(2):
+            # Reload creates a new coordinator, but keeps entry and registry.
+            coordinator, _unused_entry = self._migration_fixture()
+            entities = await self._add_migration_entities(
+                coordinator, entry,
+                [number_platform, button_platform, select_platform, sensor],
+            )
+            self.assertEqual(coordinator.system_device_id, root.id)
+            self.assertNotEqual(coordinator.system_device_id, foreign.id)
+            self.assertEqual(len(self.registry.devices), expected_devices)
+            by_unique_id = {entity._attr_unique_id: entity for entity in entities}
+            self.assertEqual(by_unique_id["entry-123_wtc_anlagendruck"].native_value, 1.49)
+            self.assertEqual(by_unique_id["entry-123_sg_aussentemperatur"].native_value, 12.5)
+            self.assertEqual(by_unique_id["entry-123_sg_systembetriebsart"].current_option, "Automatik")
+            for key in (
+                "sg_betriebsart_hk1_vorgabe",
+                "hk_betriebsart_vorgabe_select",
+                "hk3_betriebsart_vorgabe_select",
+            ):
+                self.assertEqual(by_unique_id[f"entry-123_{key}"].current_option, "Zeitprogramm 1")
+            self.assertEqual(by_unique_id["entry-123_sg_wwsolltemperatur_normal_number"].native_value, 55.0)
+            self.assertEqual(by_unique_id["entry-123_sg_wwsolltemperatur_absenk_number"].native_value, 40.0)
+            for entity in entities:
+                unique_id = entity._attr_unique_id
+                device = self.registry.async_get_device_by_identifier(
+                    next(iter(entity.device_info["identifiers"])), entry.entry_id
+                )
+                if unique_id in entity_registry:
+                    self.assertEqual(entity_registry[unique_id]["device_id"], device.id)
+                else:
+                    entity_registry[unique_id] = {
+                        "entity_id": f"sensor.{unique_id}", "device_id": device.id,
+                    }
+            for key, original in entities_before.items():
+                self.assertEqual(entity_registry[key], original)
+            await by_unique_id["entry-123_sg_systembetriebsart"].async_select_option("Sommer")
+            await by_unique_id["entry-123_sg_wwsolltemperatur_normal_number"].async_set_native_value(56.0)
+            await by_unique_id["entry-123_sg_warmwasser_push"].async_press()
+            self.assertEqual(
+                [(args[0].key, args[1]) for args, _kwargs in coordinator.async_enqueue_write.call_args_list],
+                [("sg_systembetriebsart", 2), ("sg_wwsolltemperatur_normal", 560), ("sg_warmwasser_push", 1)],
+            )
+        for key, old in registry_before.items():
+            device = self.registry.devices[key]
+            self.assertEqual(device.id, old.id)
+            self.assertEqual(device.area_id, old.area_id)
+            self.assertEqual(device.name_by_user, old.name_by_user)
+            self.assertEqual(device.disabled_by, old.disabled_by)
+            self.assertEqual(getattr(device, "via_device_id", None), getattr(old, "via_device_id", None))
+        self.assertEqual((entry.data, entry.options), config_before)
 
     def test_confirmed_wtc_frames_render_valid_zero_and_counter_values(self) -> None:
         """Confirmed WTC raw values should render expected HA states."""
@@ -210,6 +423,7 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
         )
         coordinator = SimpleNamespace(
             data={register.key: {"value_int": 597, "value_hex": "0255"}},
+            system_device_id="existing-system-registry-id",
         )
         entity = sensor.WeishauptExperimentalWtcSensorEntity(
             coordinator=coordinator,
@@ -397,6 +611,7 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
                 },
             },
             logical_device_names={"network": "GATEWAY0"},
+            system_device_id="existing-system-registry-id",
         )
         entry = SimpleNamespace(
             entry_id="entry-123",

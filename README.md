@@ -149,6 +149,9 @@ Once these requirements are met, the integration can be added to Home Assistant.
 
 ## Installation
 
+Minimum Home Assistant Core version: **2026.8.0**. For existing installations,
+see the [device registry migration, validation and rollback guide](docs/device-registry-migration.md).
+
 ### HACS — Custom Repository
 
 1. Open HACS in Home Assistant.

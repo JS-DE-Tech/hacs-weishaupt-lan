@@ -22,8 +22,9 @@ from .sensor import (
     _device_model,
     _device_name,
     _is_system_device,
+    _register_system_device,
 )
-from .sensors import WeishauptDeviceGroup, WeishauptSensorDefinition
+from .sensors import WeishauptSensorDefinition
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up Weishaupt Select entities from a config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
+    _register_system_device(hass, entry, coordinator)
 
     entities: list[WeishauptSelectEntity] = []
 
@@ -85,9 +87,7 @@ class WeishauptSelectEntity(CoordinatorEntity, SelectEntity):
             model=_device_model(group, self._sensor_def),
         )
         if not _is_system_device(self._entry.entry_id, group, self._sensor_def):
-            info["via_device"] = _device_identifier(
-                self._entry.entry_id, WeishauptDeviceGroup.SG
-            )
+            info["via_device_id"] = self.coordinator.system_device_id
         return info
 
     @property

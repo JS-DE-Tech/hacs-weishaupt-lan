@@ -180,16 +180,14 @@ def _is_system_device(
     )
 
 
-async def async_setup_entry(
+def _register_system_device(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up Weishaupt WTC sensors from a config entry."""
-    coordinator: WeishauptDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-
+    coordinator: WeishauptDataUpdateCoordinator,
+) -> str:
+    """Register the root before any platform links devices to its registry ID."""
     device_registry = dr.async_get(hass)
-    device_registry.async_get_or_create(
+    system_device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={_system_device_identifier(entry.entry_id)},
         name=getattr(coordinator, "logical_device_names", {}).get(
@@ -199,6 +197,20 @@ async def async_setup_entry(
         manufacturer="Weishaupt",
         model=DEVICE_GROUP_MODELS[WeishauptDeviceGroup.SG],
     )
+    coordinator.system_device_id = system_device.id
+    return system_device.id
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up Weishaupt WTC sensors from a config entry."""
+    coordinator: WeishauptDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    system_device_id = _register_system_device(hass, entry, coordinator)
+    device_registry = dr.async_get(hass)
     if (
         coordinator.experimental_wtc_registers
         or getattr(coordinator, "extended_experimental_wtc_registers", [])
@@ -211,7 +223,7 @@ async def async_setup_entry(
             name="WTC Experimental Diagnostics",
             manufacturer="Weishaupt",
             model=DEVICE_SUFFIX_MODELS[EXPERIMENTAL_WTC_DEVICE_SUFFIX],
-            via_device=_system_device_identifier(entry.entry_id),
+            via_device_id=system_device_id,
         )
 
     entities: list[WeishauptSensorEntity | WeishauptExperimentalWtcSensorEntity] = []
@@ -318,7 +330,7 @@ class WeishauptSensorEntity(
             model=_device_model(group, self._sensor_def),
         )
         if not _is_system_device(self._entry.entry_id, group, self._sensor_def):
-            device_info["via_device"] = _system_device_identifier(self._entry.entry_id)
+            device_info["via_device_id"] = self.coordinator.system_device_id
         configuration_url = _configuration_url(self._entry, self._sensor_def)
         if configuration_url is not None:
             device_info["configuration_url"] = configuration_url
@@ -544,7 +556,7 @@ class WeishauptExperimentalWtcSensorEntity(
             name="WTC Experimental Diagnostics",
             manufacturer="Weishaupt",
             model=DEVICE_SUFFIX_MODELS[EXPERIMENTAL_WTC_DEVICE_SUFFIX],
-            via_device=_system_device_identifier(self._entry.entry_id),
+            via_device_id=self.coordinator.system_device_id,
         )
 
     def _data(self) -> dict[str, Any] | None:

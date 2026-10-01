@@ -8,7 +8,7 @@
     "iot_class": "local_polling",
     "issue_tracker": "https://github.com/JS-DE-Tech/hacs-weishaupt-lan/issues",
     "requirements": [],
-    "version": "0.4.6",
+    "version": "0.4.7",
     "platforms": [
         "sensor",
         "select",

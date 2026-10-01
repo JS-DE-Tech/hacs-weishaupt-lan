@@ -644,8 +644,9 @@ async def _async_cleanup_inactive_devices(
     device_registry = dr.async_get(hass)
 
     for suffix in inactive_suffixes:
-        device = device_registry.async_get_device(
-            identifiers={(DOMAIN, f"{entry.entry_id}_{suffix}")}
+        device = device_registry.async_get_device_by_identifier(
+            (DOMAIN, f"{entry.entry_id}_{suffix}"),
+            entry.entry_id,
         )
         if device is None:
             continue

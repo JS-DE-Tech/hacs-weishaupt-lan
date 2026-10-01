@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.4.7 - 2026-10-01
+
+### Fixed
+- Migrated device hierarchy links to real `via_device_id` registry IDs and scoped device lookups to the owning ConfigEntry.
+- Preserved existing device identifiers, entity IDs, user settings and heating controls on setup and reload.
+
+### Changed
+- Raised the minimum Home Assistant Core version to 2026.8.0 for the required device registry APIs.
+- Documented installation, real-instance validation and rollback for existing integrations.
+
 ## 0.4.6 - 2026-06-12
 
 ### Changed

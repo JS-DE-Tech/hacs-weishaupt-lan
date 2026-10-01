@@ -337,8 +337,12 @@ class DeviceRegistry:
         self.device = device
         self.removed: list[str] = []
 
-    def async_get_device(self, identifiers: set[tuple[str, str]]):
-        if self.device and self.device.identifiers == identifiers:
+    def async_get_device_by_identifier(self, identifier, config_entry_id):
+        if (
+            self.device
+            and identifier in self.device.identifiers
+            and self.device.config_entry_id == config_entry_id
+        ):
             return self.device
         return None
 
@@ -872,6 +876,7 @@ class IntegrationHelperTests(unittest.IsolatedAsyncioTestCase):
         """Cleanup should remove only stale integration-owned device contents."""
         device = SimpleNamespace(
             id="device-1",
+            config_entry_id="entry-123",
             identifiers={("weishaupt_wtc_lan", "entry-123_wtc_experimental")},
         )
         entries = [
@@ -901,6 +906,7 @@ class IntegrationHelperTests(unittest.IsolatedAsyncioTestCase):
         """Cleanup should not remove devices containing unrelated entities."""
         device = SimpleNamespace(
             id="device-1",
+            config_entry_id="entry-123",
             identifiers={("weishaupt_wtc_lan", "entry-123_wtc_experimental")},
         )
         entries = [
@@ -925,6 +931,23 @@ class IntegrationHelperTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(entity_registry.removed, [])
         self.assertEqual(device_registry.removed, [])
+
+    async def test_cleanup_lookup_is_scoped_to_owning_config_entry(self) -> None:
+        """A matching identifier in another entry must never be removed."""
+        device = SimpleNamespace(
+            id="foreign-device", config_entry_id="other-entry",
+            identifiers={("weishaupt_wtc_lan", "entry-123_wtc_experimental")},
+        )
+        entity_registry = EntityRegistry([])
+        device_registry = DeviceRegistry(device)
+        integration.er.async_get = lambda hass: entity_registry
+        integration.dr.async_get = lambda hass: device_registry
+        integration.er.async_entries_for_device = lambda registry, device_id: []
+        await integration._async_cleanup_inactive_devices(
+            object(), SimpleNamespace(entry_id="entry-123"), {"wtc_experimental"}
+        )
+        self.assertEqual(device_registry.removed, [])
+        self.assertEqual(entity_registry.removed, [])
 
     async def test_reenable_only_integration_disabled_default_entities(self) -> None:
         """Default-enabled diagnostics should be re-enabled only for integration-disabled entries."""
