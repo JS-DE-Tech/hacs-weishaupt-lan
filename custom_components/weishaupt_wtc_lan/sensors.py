@@ -223,6 +223,23 @@ IP_MODE_MAP = {
 # ============================================================================
 
 SG_SENSORS: list[WeishauptSensorDefinition] = [
+    # HK1 heating curve parallel shift - confirmed by hardware A-B-A tests
+    WeishauptSensorDefinition(
+        key="sg_heizkurve_parallelverschiebung_hk1",
+        name="Heizkurve Parallelverschiebung HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x25AD,
+        os=0x02,
+        vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit="K",
+        scale=0.1,
+        signed=True,
+        icon="mdi:chart-bell-curve",
+        entity_registry_enabled_default=True,
+    ),
     # --- Heating circuit 1 settings (via SG) ---
     WeishauptSensorDefinition(
         key="sg_betriebsart_hk1_vorgabe",
