@@ -780,3 +780,19 @@ The existing `vs` field still defines the expected response size,
 preserving strict response matching and existing write behavior.
 
 Other controller models and firmware versions are not yet validated.
+
+### HK1 energy-relevant settings (read-only)
+
+The following settings were validated on a WTC-GW 15-B:
+
+| Setting | Register | Observed value |
+|---|---|---|
+| Outdoor temperature level raise | `0x2581` | -20.0 °C (controller: Off) |
+| Domestic hot water priority | `0x2537` | 0 (Priority) |
+| Room-target heating limit | `0x257C` | 1 (On) |
+
+These values are read-only. The level-raise value of -20.0 °C
+corresponded to "Off" on the tested controller. Enum states other
+than the observed values still need cross-device validation.
+
+No controller setting changes were made.

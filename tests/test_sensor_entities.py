@@ -275,6 +275,54 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
             await platform.async_setup_entry(hass, entry, add_entities)
         return added
 
+
+    async def test_hk1_efficiency_settings(self) -> None:
+        """Validate three read-only HK1 efficiency settings."""
+        samples = {
+            "sg_niveauanhebung_aussentemperatur_hk1": (
+                0x2581, 2, 0xFF38, -20.0
+            ),
+            "sg_warmwasserprioritaet_hk1": (
+                0x2537, 1, 0, "Vorrang"
+            ),
+            "sg_raumsolltemperatur_heizgrenze_hk1": (
+                0x257C, 1, 1, "Ein"
+            ),
+        }
+
+        for key, (ox, vs, raw, expected) in samples.items():
+            with self.subTest(key=key):
+                definition = sensor_by_key(key)
+
+                self.assertEqual(definition.mi, 2)
+                self.assertEqual(definition.mx, 0)
+                self.assertEqual(definition.ox, ox)
+                self.assertEqual(definition.os, 2)
+                self.assertEqual(definition.vs, vs)
+                self.assertTrue(definition.poll)
+                self.assertEqual(
+                    heating_circuits.heating_circuit_for_sensor(
+                        definition
+                    ), 1
+                )
+
+                coordinator = SimpleNamespace(
+                    data={
+                        key: {
+                            "value_int": raw,
+                            "value_hex": f"{raw:0{vs * 2}x}",
+                        }
+                    }
+                )
+
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=coordinator,
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="test"),
+                )
+
+                self.assertEqual(entity.native_value, expected)
+
     async def test_first_setup_registers_real_parent_id_in_every_platform_order(self):
         """Any platform order must not depend on sensor being first."""
         for platforms in itertools.permutations(
