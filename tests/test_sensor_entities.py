@@ -385,6 +385,108 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(getattr(device, "via_device_id", None), getattr(old, "via_device_id", None))
         self.assertEqual((entry.data, entry.options), config_before)
 
+
+    def test_hk1_extended_configuration_sensors(self) -> None:
+        """Verify hardware-observed HK1 register definitions and decoding."""
+        expected = {
+            "sg_vorlaufsolltemperatur_heizgrenze_hk1": (
+                0x25C7, 2, 0.1, "°C", False,
+                [(80, 8.0), (70, 7.0)],
+            ),
+            "sg_frostschutz_aussentemperatur_hk1": (
+                0x2554, 2, 0.1, "°C", True,
+                [(0, 0.0), (0xFFF6, -1.0)],
+            ),
+            "sg_aufheizoptimierung_hk1": (
+                0x25A3, 1, 1.0, None, False,
+                [(0, "Aus"), (1, "Unknown (1)")],
+            ),
+            "sg_gebaeudebauweise_hk1": (
+                0x256E, 1, 1.0, None, False,
+                [(2, "leicht"), (3, "Unknown (3)")],
+            ),
+        }
+
+        for key, (ox, vs, scale, unit, signed, samples) in expected.items():
+            definitions = [
+                item for item in sensors.SG_SENSORS
+                if item.key == key
+            ]
+            self.assertEqual(len(definitions), 1, key)
+            definition = definitions[0]
+
+            self.assertEqual(
+                (
+                    definition.mi,
+                    definition.mx,
+                    definition.ox,
+                    definition.os,
+                    definition.vs,
+                ),
+                (0x02, 0x00, ox, 0x02, vs),
+            )
+            self.assertEqual(
+                definition.group,
+                sensors.WeishauptDeviceGroup.SG,
+            )
+            self.assertEqual(definition.scale, scale)
+            self.assertEqual(definition.unit, unit)
+            self.assertEqual(definition.signed, signed)
+            self.assertTrue(definition.poll)
+
+            for raw, expected_value in samples:
+                coordinator = SimpleNamespace(
+                    data={
+                        key: {
+                            "value_int": raw,
+                            "value_hex": f"{raw:0{vs * 2}x}",
+                        }
+                    }
+                )
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=coordinator,
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="entry-123"),
+                )
+                self.assertEqual(
+                    entity.native_value,
+                    expected_value,
+                    f"{key}: raw={raw}",
+                )
+
+
+    def test_extended_hk1_sensors_are_assigned_to_heating_circuit_1(self) -> None:
+        """New SG parameters must belong to the logical HK1 device."""
+        expected_keys = {
+            "sg_vorlaufsolltemperatur_heizgrenze_hk1",
+            "sg_frostschutz_aussentemperatur_hk1",
+            "sg_aufheizoptimierung_hk1",
+            "sg_gebaeudebauweise_hk1",
+        }
+
+        definitions = heating_circuits.build_sensor_definitions(
+            [1], {"system"}
+        )
+        selected = {
+            definition.key: definition
+            for definition in definitions
+            if definition.key in expected_keys
+        }
+
+        self.assertEqual(set(selected), expected_keys)
+
+        for key, definition in selected.items():
+            with self.subTest(key=key):
+                self.assertEqual(
+                    heating_circuits.heating_circuit_for_sensor(definition),
+                    1,
+                )
+                self.assertEqual(
+                    heating_circuits.device_suffix_for_sensor(definition),
+                    "hk1",
+                )
+                self.assertTrue(definition.poll)
+
     def test_confirmed_wtc_frames_render_valid_zero_and_counter_values(self) -> None:
         """Confirmed WTC raw values should render expected HA states."""
         keys_and_expected = {
