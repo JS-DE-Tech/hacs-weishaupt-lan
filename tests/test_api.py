@@ -280,6 +280,69 @@ class ApiClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["key_2"]["value_int"], 0)
         self.assertEqual(result["key_3"]["value_int"], 597)
 
+
+    async def test_hk1_request_vs_differs_from_response_vs(self) -> None:
+        """HK1 may request one byte and receive two bytes."""
+        registers = [
+            ("min", 0x251B, 150),
+            ("max", 0x251C, 800),
+            ("sowi", 0x257B, 160),
+        ]
+        requested = [
+            {
+                "key": key,
+                "mi": 2,
+                "mx": 0,
+                "ox": ox,
+                "os": 2,
+                "vs": 2,
+                "request_vs": 1,
+            }
+            for key, ox, raw in registers
+        ]
+        frames = [
+            vg_with_value(api.CMD_RESPONSE, 2, 0, ox, 2, 2, raw)
+            for key, ox, raw in registers
+        ]
+        client = SequenceResponseClient([
+            capi_batch_response(frames)
+        ])
+
+        result = await client.read_parameters(requested)
+
+        self.assertEqual(
+            {key: result[key]["value_int"] for key, _, _ in registers},
+            {"min": 150, "max": 800, "sowi": 160},
+        )
+
+        for index, (_, ox, _) in enumerate(registers, start=1):
+            self.assertEqual(
+                client.payloads[0]["CAPI"][f"N{index:02d}"]["VG"],
+                api.build_read_vg(2, 0, ox, 2, 1),
+            )
+            self.assertEqual(result[registers[index - 1][0]]["vs"], 2)
+
+    async def test_hk1_request_vs_keeps_strict_response_matching(self) -> None:
+        """A wrong response address or size must still be rejected."""
+        requested = [{
+            "key": "min",
+            "mi": 2, "mx": 0, "ox": 0x251B,
+            "os": 2, "vs": 2, "request_vs": 1,
+        }]
+        wrong_frames = [
+            vg_with_value(api.CMD_RESPONSE, 2, 0, 0x251C, 2, 2, 150),
+            vg_with_value(api.CMD_RESPONSE, 2, 0, 0x251B, 2, 1, 150),
+        ]
+        client = SequenceResponseClient([
+            capi_batch_response([frame])
+            for frame in wrong_frames
+        ])
+
+        for _ in wrong_frames:
+            self.assertEqual(
+                await client.read_parameters(requested), {}
+            )
+
     async def test_read_string_parameter_decodes_supported_device_name(self) -> None:
         """String read should decode a supported NUL-terminated device name."""
         value_hex = "57454d2d5347202000" + ("00" * 7)

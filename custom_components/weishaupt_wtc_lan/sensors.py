@@ -63,6 +63,7 @@ class WeishauptSensorDefinition:
     byte_offset: int = 0  # Byte offset within the source value_hex for derived sensors
     byte_length: int | None = None  # Number of bytes to read from the source value_hex
     entity_registry_enabled_default: bool | None = None  # Override default enabled state; None = use category default
+    request_vs: int | None = None  # Optional read request size; vs is expected response size
 
 
 @dataclass(frozen=True)
@@ -224,6 +225,121 @@ IP_MODE_MAP = {
 
 SG_SENSORS: list[WeishauptSensorDefinition] = [
     # --- Heating circuit 1 settings (via SG) ---
+    # HK1 outdoor temperature level raise (read-only)
+    # Raw -200 = -20.0 °C, observed as "Aus" on controller.
+    WeishauptSensorDefinition(
+        key="sg_niveauanhebung_aussentemperatur_hk1",
+        name="Niveauanhebung Außentemperatur HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x2581,
+        os=0x02,
+        vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        unit=UnitOfTemperature.CELSIUS,
+        scale=0.1,
+        signed=True,
+        icon="mdi:thermometer-chevron-up",
+    ),
+
+    # HK1 domestic hot water priority (read-only)
+    WeishauptSensorDefinition(
+        key="sg_warmwasserprioritaet_hk1",
+        name="Warmwasserpriorität HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x2537,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        value_map={
+            0: "Vorrang",
+            1: "Parallel",
+            2: "Gleitend",
+        },
+        icon="mdi:water-boiler",
+    ),
+
+    # HK1 room-temperature heating limit enable (read-only)
+    WeishauptSensorDefinition(
+        key="sg_raumsolltemperatur_heizgrenze_hk1",
+        name="Raumsolltemperatur Heizgrenze HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x257C,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        value_map={
+            0: "Aus",
+            1: "Ein",
+        },
+        icon="mdi:thermostat",
+    ),
+
+
+    # HK1 minimum flow target: request VS=1, response VS=2
+    WeishauptSensorDefinition(
+        key="sg_vorlaufsolltemperatur_minimal_hk1",
+        name="Vorlaufsolltemperatur minimal HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x251B,
+        os=0x02,
+        vs=2,
+        request_vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        scale=0.1,
+        signed=True,
+        icon="mdi:thermometer",
+    ),
+
+    # HK1 maximum flow target: request VS=1, response VS=2
+    WeishauptSensorDefinition(
+        key="sg_vorlaufsolltemperatur_maximal_hk1",
+        name="Vorlaufsolltemperatur maximal HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x251C,
+        os=0x02,
+        vs=2,
+        request_vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        scale=0.1,
+        signed=True,
+        icon="mdi:thermometer",
+    ),
+
+    # HK1 summer/winter threshold: request VS=1, response VS=2
+    WeishauptSensorDefinition(
+        key="sg_sowi_umschalttemperatur_hk1",
+        name="So/Wi Umschalttemperatur HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x257B,
+        os=0x02,
+        vs=2,
+        request_vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        scale=0.1,
+        signed=True,
+        icon="mdi:thermometer",
+    ),
+
+
     WeishauptSensorDefinition(
         key="sg_betriebsart_hk1_vorgabe",
         name="Betriebsart HK1 Vorgabe",
