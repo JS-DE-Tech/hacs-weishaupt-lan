@@ -385,6 +385,64 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(getattr(device, "via_device_id", None), getattr(old, "via_device_id", None))
         self.assertEqual((entry.data, entry.options), config_before)
 
+
+    def test_hk1_parallel_shift_read_only_sensor(self) -> None:
+        """The confirmed HK1 parallel shift register produces Kelvin values."""
+        definition = sensor_by_key(
+            "sg_heizkurve_parallelverschiebung_hk1"
+        )
+
+        self.assertEqual(
+            (definition.mi, definition.mx, definition.ox,
+             definition.os, definition.vs),
+            (0x02, 0x00, 0x25AD, 0x02, 2),
+        )
+        self.assertEqual(definition.scale, 0.1)
+        self.assertEqual(definition.unit, "K")
+        self.assertTrue(definition.signed)
+        self.assertIn(
+            definition.key,
+            heating_circuits.HK1_SENSOR_KEYS,
+        )
+
+        definitions = heating_circuits.build_sensor_definitions(
+            [1], {"system", "wtc", "ww"}
+        )
+        self.assertEqual(
+            sum(item.key == definition.key for item in definitions),
+            1,
+        )
+
+        entry = SimpleNamespace(entry_id="entry-123")
+
+        for raw, expected in (
+            (85, 8.5),
+            (90, 9.0),
+            (80, 8.0),
+            (0, 0.0),
+            (0xFFFB, -0.5),
+        ):
+            coordinator = SimpleNamespace(
+                data={
+                    definition.key: {
+                        "value_int": raw,
+                        "value_hex": f"{raw:04x}",
+                    }
+                }
+            )
+
+            entity = sensor.WeishauptSensorEntity(
+                coordinator=coordinator,
+                sensor_def=definition,
+                entry=entry,
+            )
+
+            self.assertEqual(entity.native_value, expected)
+            self.assertEqual(
+                entity._attr_unique_id,
+                "entry-123_sg_heizkurve_parallelverschiebung_hk1",
+            )
+
     def test_confirmed_wtc_frames_render_valid_zero_and_counter_values(self) -> None:
         """Confirmed WTC raw values should render expected HA states."""
         keys_and_expected = {

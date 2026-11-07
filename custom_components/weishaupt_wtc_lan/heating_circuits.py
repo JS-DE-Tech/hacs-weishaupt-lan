@@ -55,6 +55,7 @@ SYSTABLE_DEVICE_GROUP_MARKERS = {
 }
 
 HK1_SENSOR_KEYS = {
+    "sg_heizkurve_parallelverschiebung_hk1",
     "sg_betriebsart_hk1_vorgabe",
     "sg_sowi_umschaltung_hk1",
     "sg_betriebsart_hk1_aktuell",
