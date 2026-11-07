@@ -322,7 +322,7 @@ class WeishauptApiClient:
                     mx=param["mx"],
                     ox=param["ox"],
                     os_val=param["os"],
-                    vs=param["vs"],
+                    vs=param.get("request_vs") or param["vs"],
                 )
                 capi[f"N{i + 1:02d}"] = {"VG": vg}
                 request_vgs[param["key"]] = vg
