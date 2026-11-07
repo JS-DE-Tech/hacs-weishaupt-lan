@@ -759,3 +759,31 @@ Major enhancements include:
 ## License
 
 MIT
+
+### Additional HK1 configuration monitoring (read-only)
+
+The integration provides additional heating circuit 1 settings:
+
+| Parameter | CanApiJson OX | Value |
+|---|---|---|
+| Flow temperature heating limit | `0x25C7` | 0.1 °C |
+| Frost protection outdoor temperature | `0x2554` | Signed, 0.1 °C |
+| Heating optimization | `0x25A3` | 1 byte |
+| Building construction | `0x256E` | 1 byte |
+
+All four registers were read successfully on a Weishaupt WTC-GW
+15-B installation.
+
+**Validation details:**
+
+- `0x25C7`: Hardware A-B-A test, 8.0 -> 7.0 -> 8.0 °C.
+- `0x2554`: Repeated reads of 0.0 °C matched the controller.
+- `0x25A3`: Raw `0` matched "Aus"; `VS=1` verified.
+- `0x256E`: Raw `2` matched "leicht"; `VS=1` verified.
+
+For the two 1-byte settings, only the currently confirmed
+display values are mapped to labels. Other raw values remain
+explicitly unknown.
+
+Other controller models, firmware versions and parameter values
+have not been validated. No write operations are introduced.

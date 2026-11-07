@@ -69,6 +69,10 @@ HK1_SENSOR_KEYS = {
     "sg_vorlaufsolltemperatur_sonderniveau",
     "sg_vorlaufsolltemperatur_aktuell",
     "sg_vorlaufisttemperatur",
+    "sg_vorlaufsolltemperatur_heizgrenze_hk1",
+    "sg_frostschutz_aussentemperatur_hk1",
+    "sg_aufheizoptimierung_hk1",
+    "sg_gebaeudebauweise_hk1",
 }
 
 WARM_WATER_SENSOR_KEYS = {

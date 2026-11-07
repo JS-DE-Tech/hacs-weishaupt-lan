@@ -224,6 +224,51 @@ IP_MODE_MAP = {
 
 SG_SENSORS: list[WeishauptSensorDefinition] = [
     # --- Heating circuit 1 settings (via SG) ---
+
+    # HK1 flow heating limit – hardware-validated A-B-A (8 -> 7 -> 8 °C)
+    WeishauptSensorDefinition(
+        key="sg_vorlaufsolltemperatur_heizgrenze_hk1",
+        name="Vorlaufsolltemperatur Heizgrenze HK1",
+        mi=0x02, mx=0x00, ox=0x25C7, os=0x02, vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit="°C",
+        scale=0.1,
+        icon="mdi:thermometer",
+    ),
+    # Frost protection threshold – read-only, display value matched at 0 °C
+    WeishauptSensorDefinition(
+        key="sg_frostschutz_aussentemperatur_hk1",
+        name="Frostschutz Außentemperatur HK1",
+        mi=0x02, mx=0x00, ox=0x2554, os=0x02, vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit="°C",
+        scale=0.1,
+        signed=True,
+        icon="mdi:snowflake-thermometer",
+    ),
+    # Heating optimization – raw 0 matches controller setting "Aus"
+    WeishauptSensorDefinition(
+        key="sg_aufheizoptimierung_hk1",
+        name="Aufheizoptimierung HK1",
+        mi=0x02, mx=0x00, ox=0x25A3, os=0x02, vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        value_map={0: "Aus"},
+        icon="mdi:clock-fast",
+    ),
+    # Building construction – raw 2 matches controller setting "leicht"
+    WeishauptSensorDefinition(
+        key="sg_gebaeudebauweise_hk1",
+        name="Gebäudebauweise HK1",
+        mi=0x02, mx=0x00, ox=0x256E, os=0x02, vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        value_map={2: "leicht"},
+        icon="mdi:home-thermometer",
+    ),
+
     WeishauptSensorDefinition(
         key="sg_betriebsart_hk1_vorgabe",
         name="Betriebsart HK1 Vorgabe",
