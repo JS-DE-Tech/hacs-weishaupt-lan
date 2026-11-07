@@ -759,3 +759,24 @@ Major enhancements include:
 ## License
 
 MIT
+
+### HK1 temperature limits (read-only)
+
+Three HK1 settings require a CanApiJson read request with `VS=1`,
+but respond with two bytes (`VS=2`):
+
+| Setting | OX | Display-matched value |
+|---|---|---|
+| Minimum flow target temperature | `0x251B` | 15.0 °C |
+| Maximum flow target temperature | `0x251C` | 80.0 °C |
+| Summer/winter switching temperature | `0x257B` | 16.0 °C |
+
+All three were successfully read twice on a WTC-GW 15-B.
+The values matched the controller display. No controller settings
+were changed for validation.
+
+An optional `request_vs` field controls GET frame construction.
+The existing `vs` field still defines the expected response size,
+preserving strict response matching and existing write behavior.
+
+Other controller models and firmware versions are not yet validated.
