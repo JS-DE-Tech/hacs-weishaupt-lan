@@ -385,6 +385,56 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(getattr(device, "via_device_id", None), getattr(old, "via_device_id", None))
         self.assertEqual((entry.data, entry.options), config_before)
 
+
+    def test_hk1_heating_curve_slope_read_only_sensor(self) -> None:
+        """HK1 heating curve slope uses the confirmed CAPI register."""
+        definition = sensor_by_key("sg_heizkurvensteilheit_hk1")
+
+        self.assertEqual(definition.mi, 0x02)
+        self.assertEqual(definition.mx, 0x00)
+        self.assertEqual(definition.ox, 0x254B)
+        self.assertEqual(definition.os, 0x02)
+        self.assertEqual(definition.vs, 2)
+        self.assertEqual(definition.scale, 0.1)
+        self.assertFalse(definition.signed)
+
+        self.assertIn(
+            definition.key,
+            heating_circuits.HK1_SENSOR_KEYS,
+        )
+
+        definitions = heating_circuits.build_sensor_definitions(
+            [1], {"system", "wtc", "ww"}
+        )
+        self.assertEqual(
+            sum(item.key == definition.key for item in definitions),
+            1,
+        )
+
+        entry = SimpleNamespace(entry_id="entry-123")
+
+        for raw, expected in ((85, 8.5), (90, 9.0), (0, 0.0)):
+            coordinator = SimpleNamespace(
+                data={
+                    definition.key: {
+                        "value_int": raw,
+                        "value_hex": f"{raw:04x}",
+                    }
+                }
+            )
+
+            entity = sensor.WeishauptSensorEntity(
+                coordinator=coordinator,
+                sensor_def=definition,
+                entry=entry,
+            )
+
+            self.assertEqual(entity.native_value, expected)
+            self.assertEqual(
+                entity._attr_unique_id,
+                "entry-123_sg_heizkurvensteilheit_hk1",
+            )
+
     def test_confirmed_wtc_frames_render_valid_zero_and_counter_values(self) -> None:
         """Confirmed WTC raw values should render expected HA states."""
         keys_and_expected = {

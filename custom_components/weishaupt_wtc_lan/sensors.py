@@ -223,6 +223,23 @@ IP_MODE_MAP = {
 # ============================================================================
 
 SG_SENSORS: list[WeishauptSensorDefinition] = [
+    # HK1 heating curve slope – confirmed via display test
+    WeishauptSensorDefinition(
+        key="sg_heizkurvensteilheit_hk1",
+        name="Heizkurvensteilheit HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x254B,
+        os=0x02,
+        vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        scale=0.1,
+        icon="mdi:chart-bell-curve",
+        signed=False,
+        entity_registry_enabled_default=True,
+    ),
+
     # --- Heating circuit 1 settings (via SG) ---
     WeishauptSensorDefinition(
         key="sg_betriebsart_hk1_vorgabe",
