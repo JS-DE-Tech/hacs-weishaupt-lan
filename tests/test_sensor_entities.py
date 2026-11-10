@@ -276,6 +276,103 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
         return added
 
 
+
+    def test_restored_hk1_definitions_and_device_mapping(self) -> None:
+        """Keep six read-only HK1 definitions from upstream PRs #9/#10/#11."""
+        registers = {
+            "sg_heizkurvensteilheit_hk1": (0x254B, 2, 0.1, False),
+            "sg_heizkurve_parallelverschiebung_hk1": (0x25AD, 2, 0.1, True),
+            "sg_vorlaufsolltemperatur_heizgrenze_hk1": (0x25C7, 2, 0.1, False),
+            "sg_frostschutz_aussentemperatur_hk1": (0x2554, 2, 0.1, True),
+            "sg_aufheizoptimierung_hk1": (0x25A3, 1, 1.0, False),
+            "sg_gebaeudebauweise_hk1": (0x256E, 1, 1.0, False),
+        }
+        definitions = heating_circuits.build_sensor_definitions([1], {"system"})
+        for key, (ox, vs, scale, signed) in registers.items():
+            with self.subTest(key=key):
+                matched = [item for item in definitions if item.key == key]
+                self.assertEqual(len(matched), 1)
+                definition = matched[0]
+                self.assertEqual(
+                    (definition.mi, definition.mx, definition.ox, definition.os, definition.vs),
+                    (0x02, 0x00, ox, 0x02, vs),
+                )
+                self.assertEqual(definition.scale, scale)
+                self.assertEqual(definition.signed, signed)
+                self.assertIsNone(definition.request_vs)
+                self.assertTrue(definition.poll)
+                self.assertIn(key, heating_circuits.HK1_SENSOR_KEYS)
+                self.assertEqual(heating_circuits.heating_circuit_for_sensor(definition), 1)
+                self.assertEqual(heating_circuits.device_suffix_for_sensor(definition), "hk1")
+
+    def test_restored_hk1_values_and_zero_enums(self) -> None:
+        """Decode six observed values, including valid zero-value enums."""
+        samples = {
+            "sg_heizkurvensteilheit_hk1": (85, 8.5),
+            "sg_heizkurve_parallelverschiebung_hk1": (80, 8.0),
+            "sg_vorlaufsolltemperatur_heizgrenze_hk1": (80, 8.0),
+            "sg_frostschutz_aussentemperatur_hk1": (0, 0.0),
+            "sg_aufheizoptimierung_hk1": (0, "Aus"),
+            "sg_gebaeudebauweise_hk1": (2, "leicht"),
+        }
+        for key, (raw, expected) in samples.items():
+            with self.subTest(key=key):
+                definition = sensor_by_key(key)
+                coordinator = SimpleNamespace(data={
+                    key: {"value_int": raw, "value_hex": f"{raw:0{definition.vs * 2}x}"}
+                })
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=coordinator,
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="entry-123"),
+                )
+                self.assertTrue(entity.available)
+                self.assertEqual(entity.native_value, expected)
+
+    def test_restored_hk1_signed_negative_values(self) -> None:
+        """Negative shifts and temperatures must decode as signed 16-bit values."""
+        for key in (
+            "sg_heizkurve_parallelverschiebung_hk1",
+            "sg_frostschutz_aussentemperatur_hk1",
+        ):
+            with self.subTest(key=key):
+                definition = sensor_by_key(key)
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=SimpleNamespace(data={
+                        key: {"value_int": 0xFFF6, "value_hex": "fff6"}
+                    }),
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="entry-123"),
+                )
+                self.assertEqual(entity.native_value, -1.0)
+
+    def test_restored_hk1_sensor_ids_survive_reload(self) -> None:
+        """Missing HK1 data can recover without changing registered entity IDs."""
+        keys = (
+            "sg_heizkurvensteilheit_hk1",
+            "sg_heizkurve_parallelverschiebung_hk1",
+            "sg_vorlaufsolltemperatur_heizgrenze_hk1",
+            "sg_frostschutz_aussentemperatur_hk1",
+            "sg_aufheizoptimierung_hk1",
+            "sg_gebaeudebauweise_hk1",
+        )
+        for key in keys:
+            with self.subTest(key=key):
+                definition = sensor_by_key(key)
+                coordinator = SimpleNamespace(data={})
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=coordinator,
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="entry-123"),
+                )
+                self.assertEqual(entity._attr_unique_id, f"entry-123_{key}")
+                self.assertFalse(entity.available)
+                coordinator.data[key] = {
+                    "value_int": 0,
+                    "value_hex": "00" * definition.vs,
+                }
+                self.assertTrue(entity.available)
+
     async def test_hk1_efficiency_settings(self) -> None:
         """Validate three read-only HK1 efficiency settings."""
         samples = {
