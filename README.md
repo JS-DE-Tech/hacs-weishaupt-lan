@@ -759,3 +759,72 @@ Major enhancements include:
 ## License
 
 MIT
+
+### HK1 temperature limits (read-only)
+
+Three HK1 settings require a CanApiJson read request with `VS=1`,
+but respond with two bytes (`VS=2`):
+
+| Setting | OX | Display-matched value |
+|---|---|---|
+| Minimum flow target temperature | `0x251B` | 15.0 °C |
+| Maximum flow target temperature | `0x251C` | 80.0 °C |
+| Summer/winter switching temperature | `0x257B` | 16.0 °C |
+
+All three were successfully read twice on a WTC-GW 15-B.
+The values matched the controller display. No controller settings
+were changed for validation.
+
+An optional `request_vs` field controls GET frame construction.
+The existing `vs` field still defines the expected response size,
+preserving strict response matching and existing write behavior.
+
+Other controller models and firmware versions are not yet validated.
+
+### HK1 energy-relevant settings (read-only)
+
+The following settings were validated on a WTC-GW 15-B:
+
+| Setting | Register | Observed value |
+|---|---|---|
+| Outdoor temperature level raise | `0x2581` | -20.0 °C (controller: Off) |
+| Domestic hot water priority | `0x2537` | 0 (Priority) |
+| Room-target heating limit | `0x257C` | 1 (On) |
+
+These values are read-only. The level-raise value of -20.0 °C
+corresponded to "Off" on the tested controller. Enum states other
+than the observed values still need cross-device validation.
+
+No controller setting changes were made.
+
+### WTC read-only sensors — standard polling (development branch)
+
+PR #14 exposes 13 read-only WTC registers directly under the **WTC Brennwertgerät**
+device as standard sensor entities (not Diagnostic entities). Existing entity
+unique IDs are preserved. The regular coordinator now polls the 13 values along
+with other WTC data; the separate 180-second opt-in research scheduler has been
+removed. Default scan interval is **60 seconds**, and users should explicitly
+configure 60 seconds on an existing installation.
+
+**Important:** The observations are preliminary. In particular, full-batch
+stability with all 13 candidates has not yet been proven, and some meanings,
+units, scales, and enum mappings remain unconfirmed. Hardware verification is recorded separately from display naming. Avoid simultaneous standalone probing and enable neither
+legacy experimental catalog unless needed. See
+`docs/wtc-13-candidate-polling.md` for observation details and safety limits.
+
+### WTC read-only sensor names and display checks (2026-11-10)
+
+All 13 additional WTC read-only sensors use clean, normal display names without
+`(Kandidat)` or `(unbestätigt)`; they belong to the WTC boiler device and not
+to the Diagnostic entity category. **Keys are intentionally unchanged**, even
+where they end in `_kandidat`, so the Home Assistant entity registry preserves
+existing unique IDs. Regular polling uses the 60-second default; existing user
+options must be set to 60 seconds explicitly.
+
+On the tested WTC-GW 15-B, controller readouts matched the internal pump
+power (11 W), minimum/maximum pump settings (30/80 %), and paired direct reads
+of burner target (1569 -> 15.69 %) and blower control (1042 -> 10.42 %,
+1041 -> 10.41 %). Pump mode raw 9 mapped to Konstantdruck Stufe 2 on this
+unit. Other values remain raw until their meaning is independently checked;
+neutral presentation names are not proof of broad validation. Stability of
+all 13 in regular batches needs monitoring. See the observations document.

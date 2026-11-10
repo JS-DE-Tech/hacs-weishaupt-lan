@@ -275,6 +275,181 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
             await platform.async_setup_entry(hass, entry, add_entities)
         return added
 
+
+
+    def test_restored_hk1_definitions_and_device_mapping(self) -> None:
+        """Keep six read-only HK1 definitions from upstream PRs #9/#10/#11."""
+        registers = {
+            "sg_heizkurvensteilheit_hk1": (0x254B, 2, 0.1, False),
+            "sg_heizkurve_parallelverschiebung_hk1": (0x25AD, 2, 0.1, True),
+            "sg_vorlaufsolltemperatur_heizgrenze_hk1": (0x25C7, 2, 0.1, False),
+            "sg_frostschutz_aussentemperatur_hk1": (0x2554, 2, 0.1, True),
+            "sg_aufheizoptimierung_hk1": (0x25A3, 1, 1.0, False),
+            "sg_gebaeudebauweise_hk1": (0x256E, 1, 1.0, False),
+        }
+        definitions = heating_circuits.build_sensor_definitions([1], {"system"})
+        for key, (ox, vs, scale, signed) in registers.items():
+            with self.subTest(key=key):
+                matched = [item for item in definitions if item.key == key]
+                self.assertEqual(len(matched), 1)
+                definition = matched[0]
+                self.assertEqual(
+                    (definition.mi, definition.mx, definition.ox, definition.os, definition.vs),
+                    (0x02, 0x00, ox, 0x02, vs),
+                )
+                self.assertEqual(definition.scale, scale)
+                self.assertEqual(definition.signed, signed)
+                self.assertIsNone(definition.request_vs)
+                self.assertTrue(definition.poll)
+                self.assertIn(key, heating_circuits.HK1_SENSOR_KEYS)
+                self.assertEqual(heating_circuits.heating_circuit_for_sensor(definition), 1)
+                self.assertEqual(heating_circuits.device_suffix_for_sensor(definition), "hk1")
+
+    def test_restored_hk1_values_and_zero_enums(self) -> None:
+        """Decode six observed values, including valid zero-value enums."""
+        samples = {
+            "sg_heizkurvensteilheit_hk1": (85, 8.5),
+            "sg_heizkurve_parallelverschiebung_hk1": (80, 8.0),
+            "sg_vorlaufsolltemperatur_heizgrenze_hk1": (80, 8.0),
+            "sg_frostschutz_aussentemperatur_hk1": (0, 0.0),
+            "sg_aufheizoptimierung_hk1": (0, "Aus"),
+            "sg_gebaeudebauweise_hk1": (2, "leicht"),
+        }
+        for key, (raw, expected) in samples.items():
+            with self.subTest(key=key):
+                definition = sensor_by_key(key)
+                coordinator = SimpleNamespace(data={
+                    key: {"value_int": raw, "value_hex": f"{raw:0{definition.vs * 2}x}"}
+                })
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=coordinator,
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="entry-123"),
+                )
+                self.assertTrue(entity.available)
+                self.assertEqual(entity.native_value, expected)
+
+    def test_restored_hk1_signed_negative_values(self) -> None:
+        """Negative shifts and temperatures must decode as signed 16-bit values."""
+        for key in (
+            "sg_heizkurve_parallelverschiebung_hk1",
+            "sg_frostschutz_aussentemperatur_hk1",
+        ):
+            with self.subTest(key=key):
+                definition = sensor_by_key(key)
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=SimpleNamespace(data={
+                        key: {"value_int": 0xFFF6, "value_hex": "fff6"}
+                    }),
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="entry-123"),
+                )
+                self.assertEqual(entity.native_value, -1.0)
+
+    def test_restored_hk1_sensor_ids_survive_reload(self) -> None:
+        """Missing HK1 data can recover without changing registered entity IDs."""
+        keys = (
+            "sg_heizkurvensteilheit_hk1",
+            "sg_heizkurve_parallelverschiebung_hk1",
+            "sg_vorlaufsolltemperatur_heizgrenze_hk1",
+            "sg_frostschutz_aussentemperatur_hk1",
+            "sg_aufheizoptimierung_hk1",
+            "sg_gebaeudebauweise_hk1",
+        )
+        for key in keys:
+            with self.subTest(key=key):
+                definition = sensor_by_key(key)
+                coordinator = SimpleNamespace(data={})
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=coordinator,
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="entry-123"),
+                )
+                self.assertEqual(entity._attr_unique_id, f"entry-123_{key}")
+                self.assertFalse(entity.available)
+                coordinator.data[key] = {
+                    "value_int": 0,
+                    "value_hex": "00" * definition.vs,
+                }
+                self.assertTrue(entity.available)
+
+    def test_wtc_display_verified_target_and_blower_percentages(self) -> None:
+        """WTC-GW 15-B display comparison confirms both 0.01 percent scales."""
+        samples = (
+            ("wtc_brenner_sollleistung_kandidat", 0x2542, 1569, 15.69),
+            ("wtc_geblaese_ansteuerung_kandidat", 0x257E, 1042, 10.42),
+            ("wtc_geblaese_ansteuerung_kandidat", 0x257E, 1041, 10.41),
+        )
+        for key, ox, raw, expected in samples:
+            with self.subTest(key=key, raw=raw):
+                definition = sensor_by_key(key)
+                self.assertEqual(definition.ox, ox)
+                self.assertEqual(definition.unit, "%")
+                self.assertEqual(definition.scale, 0.01)
+                self.assertEqual(definition.group, sensors.WeishauptDeviceGroup.WTC)
+                self.assertIsNone(definition.entity_category)
+                self.assertTrue(definition.poll)
+                coordinator = SimpleNamespace(
+                    data={key: {"value_int": raw, "value_hex": f"{raw:04x}"}}
+                )
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=coordinator,
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="entry-123"),
+                )
+                self.assertEqual(entity._attr_unique_id, f"entry-123_{key}")
+                self.assertEqual(entity.native_value, expected)
+                coordinator.data[key] = {"value_int": 0, "value_hex": "0000"}
+                self.assertTrue(entity.available)
+                self.assertEqual(entity.native_value, 0.0)
+
+    async def test_hk1_efficiency_settings(self) -> None:
+        """Validate three read-only HK1 efficiency settings."""
+        samples = {
+            "sg_niveauanhebung_aussentemperatur_hk1": (
+                0x2581, 2, 0xFF38, -20.0
+            ),
+            "sg_warmwasserprioritaet_hk1": (
+                0x2537, 1, 0, "Vorrang"
+            ),
+            "sg_raumsolltemperatur_heizgrenze_hk1": (
+                0x257C, 1, 1, "Ein"
+            ),
+        }
+
+        for key, (ox, vs, raw, expected) in samples.items():
+            with self.subTest(key=key):
+                definition = sensor_by_key(key)
+
+                self.assertEqual(definition.mi, 2)
+                self.assertEqual(definition.mx, 0)
+                self.assertEqual(definition.ox, ox)
+                self.assertEqual(definition.os, 2)
+                self.assertEqual(definition.vs, vs)
+                self.assertTrue(definition.poll)
+                self.assertEqual(
+                    heating_circuits.heating_circuit_for_sensor(
+                        definition
+                    ), 1
+                )
+
+                coordinator = SimpleNamespace(
+                    data={
+                        key: {
+                            "value_int": raw,
+                            "value_hex": f"{raw:0{vs * 2}x}",
+                        }
+                    }
+                )
+
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=coordinator,
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="test"),
+                )
+
+                self.assertEqual(entity.native_value, expected)
+
     async def test_first_setup_registers_real_parent_id_in_every_platform_order(self):
         """Any platform order must not depend on sensor being first."""
         for platforms in itertools.permutations(
@@ -384,6 +559,48 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(device.disabled_by, old.disabled_by)
             self.assertEqual(getattr(device, "via_device_id", None), getattr(old, "via_device_id", None))
         self.assertEqual((entry.data, entry.options), config_before)
+
+
+    def test_hk1_temperature_limits_and_device_mapping(self) -> None:
+        """Validate new HK1 sensor definitions and response decoding."""
+        samples = {
+            "sg_vorlaufsolltemperatur_minimal_hk1": (0x251B, 150, 15.0),
+            "sg_vorlaufsolltemperatur_maximal_hk1": (0x251C, 800, 80.0),
+            "sg_sowi_umschalttemperatur_hk1": (0x257B, 160, 16.0),
+        }
+        definitions = heating_circuits.build_sensor_definitions(
+            [1], {"system"}
+        )
+        by_key = {item.key: item for item in definitions}
+
+        for key, (ox, raw, expected) in samples.items():
+            with self.subTest(key=key):
+                definition = by_key[key]
+                self.assertEqual(definition.ox, ox)
+                self.assertEqual(definition.mi, 2)
+                self.assertEqual(definition.mx, 0)
+                self.assertEqual(definition.os, 2)
+                self.assertEqual(definition.vs, 2)
+                self.assertEqual(definition.request_vs, 1)
+                self.assertTrue(definition.poll)
+                self.assertEqual(
+                    heating_circuits.heating_circuit_for_sensor(definition),
+                    1,
+                )
+                coordinator = SimpleNamespace(
+                    data={
+                        key: {
+                            "value_int": raw,
+                            "value_hex": f"{raw:04x}",
+                        }
+                    }
+                )
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=coordinator,
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="entry-123"),
+                )
+                self.assertEqual(entity.native_value, expected)
 
     def test_confirmed_wtc_frames_render_valid_zero_and_counter_values(self) -> None:
         """Confirmed WTC raw values should render expected HA states."""
@@ -824,6 +1041,39 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
             entity for entity in added if entity._sensor_def.key == "hk_betriebsart_vorgabe"
         )
         self.assertEqual(hk2_select.current_option, "Zeitprogramm 1")
+
+
+
+    def test_wtc_candidate_entities_are_regular_wtc_sensors(self) -> None:
+        """13 WTC candidates retain stable IDs and appear as ordinary WTC sensors."""
+        keys = {key for key in (
+            "wtc_brenner_istleistung_kandidat",
+            "wtc_geblaesedrehzahl_kandidat",
+            "wtc_pumpe_intern_elektrische_leistung_kandidat",
+            "wtc_kessel_vorlauf_ist_kandidat",
+            "wtc_brenner_sollleistung_kandidat",
+            "wtc_geblaese_ansteuerung_kandidat",
+            "wtc_brennertaktsperre_kandidat",
+            "wtc_schaltdifferenz_heizbetrieb_kandidat",
+            "wtc_brennerleistung_max_heizbetrieb_kandidat",
+            "wtc_pumpenleistung_min_heizbetrieb_kandidat",
+            "wtc_pumpenleistung_max_heizbetrieb_kandidat",
+            "wtc_pumpenregelungsart_kandidat",
+            "wtc_vpt_max_volumenstrom_kandidat",
+        )}
+        definitions = [d for d in sensors.WTC_SENSORS if d.key in keys]
+        self.assertEqual(len(definitions), 13)
+        for definition in definitions:
+            with self.subTest(key=definition.key):
+                self.assertIsNone(definition.entity_category)
+                self.assertTrue(definition.poll)
+                self.assertEqual(definition.group, sensors.WeishauptDeviceGroup.WTC)
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=SimpleNamespace(data={}),
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="test-entry"),
+                )
+                self.assertEqual(entity._attr_unique_id, f"test-entry_{definition.key}")
 
 
 if __name__ == "__main__":

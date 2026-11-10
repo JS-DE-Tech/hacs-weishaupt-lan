@@ -63,6 +63,7 @@ class WeishauptSensorDefinition:
     byte_offset: int = 0  # Byte offset within the source value_hex for derived sensors
     byte_length: int | None = None  # Number of bytes to read from the source value_hex
     entity_registry_enabled_default: bool | None = None  # Override default enabled state; None = use category default
+    request_vs: int | None = None  # Optional read request size; vs is expected response size
 
 
 @dataclass(frozen=True)
@@ -223,7 +224,214 @@ IP_MODE_MAP = {
 # ============================================================================
 
 SG_SENSORS: list[WeishauptSensorDefinition] = [
+    # Read-only HK1 setting, restored from upstream PRs #9/#10/#11
+    WeishauptSensorDefinition(
+        key="sg_heizkurvensteilheit_hk1",
+        name="Heizkurvensteilheit HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x254B,
+        os=0x02,
+        vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        scale=0.1,
+        signed=False,
+        icon="mdi:chart-bell-curve",
+        entity_registry_enabled_default=True,
+    ),
+    # Read-only HK1 setting, restored from upstream PRs #9/#10/#11
+    WeishauptSensorDefinition(
+        key="sg_heizkurve_parallelverschiebung_hk1",
+        name="Heizkurve Parallelverschiebung HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x25AD,
+        os=0x02,
+        vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit="K",
+        scale=0.1,
+        signed=True,
+        icon="mdi:chart-bell-curve",
+        entity_registry_enabled_default=True,
+    ),
+    # Read-only HK1 setting, restored from upstream PRs #9/#10/#11
+    WeishauptSensorDefinition(
+        key="sg_vorlaufsolltemperatur_heizgrenze_hk1",
+        name="Vorlaufsolltemperatur Heizgrenze HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x25C7,
+        os=0x02,
+        vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit="°C",
+        scale=0.1,
+        icon="mdi:thermometer",
+    ),
+    # Read-only HK1 setting, restored from upstream PRs #9/#10/#11
+    WeishauptSensorDefinition(
+        key="sg_frostschutz_aussentemperatur_hk1",
+        name="Frostschutz Außentemperatur HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x2554,
+        os=0x02,
+        vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit="°C",
+        scale=0.1,
+        signed=True,
+        icon="mdi:snowflake-thermometer",
+    ),
+    # Read-only HK1 setting, restored from upstream PRs #9/#10/#11
+    WeishauptSensorDefinition(
+        key="sg_aufheizoptimierung_hk1",
+        name="Aufheizoptimierung HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x25A3,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        value_map={0: "Aus"},
+        icon="mdi:clock-fast",
+    ),
+    # Read-only HK1 setting, restored from upstream PRs #9/#10/#11
+    WeishauptSensorDefinition(
+        key="sg_gebaeudebauweise_hk1",
+        name="Gebäudebauweise HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x256E,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        value_map={2: "leicht"},
+        icon="mdi:home-thermometer",
+    ),
     # --- Heating circuit 1 settings (via SG) ---
+    # HK1 outdoor temperature level raise (read-only)
+    # Raw -200 = -20.0 °C, observed as "Aus" on controller.
+    WeishauptSensorDefinition(
+        key="sg_niveauanhebung_aussentemperatur_hk1",
+        name="Niveauanhebung Außentemperatur HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x2581,
+        os=0x02,
+        vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        unit=UnitOfTemperature.CELSIUS,
+        scale=0.1,
+        signed=True,
+        icon="mdi:thermometer-chevron-up",
+    ),
+
+    # HK1 domestic hot water priority (read-only)
+    WeishauptSensorDefinition(
+        key="sg_warmwasserprioritaet_hk1",
+        name="Warmwasserpriorität HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x2537,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        value_map={
+            0: "Vorrang",
+            1: "Parallel",
+            2: "Gleitend",
+        },
+        icon="mdi:water-boiler",
+    ),
+
+    # HK1 room-temperature heating limit enable (read-only)
+    WeishauptSensorDefinition(
+        key="sg_raumsolltemperatur_heizgrenze_hk1",
+        name="Raumsolltemperatur Heizgrenze HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x257C,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        value_map={
+            0: "Aus",
+            1: "Ein",
+        },
+        icon="mdi:thermostat",
+    ),
+
+
+    # HK1 minimum flow target: request VS=1, response VS=2
+    WeishauptSensorDefinition(
+        key="sg_vorlaufsolltemperatur_minimal_hk1",
+        name="Vorlaufsolltemperatur minimal HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x251B,
+        os=0x02,
+        vs=2,
+        request_vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        scale=0.1,
+        signed=True,
+        icon="mdi:thermometer",
+    ),
+
+    # HK1 maximum flow target: request VS=1, response VS=2
+    WeishauptSensorDefinition(
+        key="sg_vorlaufsolltemperatur_maximal_hk1",
+        name="Vorlaufsolltemperatur maximal HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x251C,
+        os=0x02,
+        vs=2,
+        request_vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        scale=0.1,
+        signed=True,
+        icon="mdi:thermometer",
+    ),
+
+    # HK1 summer/winter threshold: request VS=1, response VS=2
+    WeishauptSensorDefinition(
+        key="sg_sowi_umschalttemperatur_hk1",
+        name="So/Wi Umschalttemperatur HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x257B,
+        os=0x02,
+        vs=2,
+        request_vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        scale=0.1,
+        signed=True,
+        icon="mdi:thermometer",
+    ),
+
+
     WeishauptSensorDefinition(
         key="sg_betriebsart_hk1_vorgabe",
         name="Betriebsart HK1 Vorgabe",
@@ -1791,6 +1999,132 @@ SOL_SENSORS: list[WeishauptSensorDefinition] = [
     ),
 ]
 
+
+# BEGIN WTC READ-ONLY SENSORS
+# Ordinary WTC polling; preserve stable sensor keys and entity unique IDs.
+# Some register semantics still need further WTC display verification.
+WTC_SENSORS.extend([
+    WeishauptSensorDefinition(
+        key='wtc_brenner_istleistung_kandidat',
+        name='Brenner-Istleistung',
+        mi=0x07, mx=0x00, ox=0x2534, os=0x00, vs=2,
+        group=WeishauptDeviceGroup.WTC,
+        modbus_reg="CanApiJson 07/00/2534/00",
+        state_class=SensorStateClass.MEASUREMENT,
+        unit='%',
+        scale=0.01,
+        entity_registry_enabled_default=True,
+    ),
+    WeishauptSensorDefinition(
+        key='wtc_geblaesedrehzahl_kandidat',
+        name='Gebläsedrehzahl',
+        mi=0x07, mx=0x00, ox=0x2540, os=0x00, vs=2,
+        group=WeishauptDeviceGroup.WTC,
+        modbus_reg="CanApiJson 07/00/2540/00",
+        state_class=SensorStateClass.MEASUREMENT,
+        unit='rpm',
+        entity_registry_enabled_default=True,
+    ),
+    WeishauptSensorDefinition(
+        key='wtc_pumpe_intern_elektrische_leistung_kandidat',
+        name='Interne Pumpe elektrische Leistung',
+        mi=0x09, mx=0x01, ox=0x261B, os=0x02, vs=1,
+        request_vs=2,
+        group=WeishauptDeviceGroup.WTC,
+        modbus_reg="CanApiJson 09/01/261B/02",
+        state_class=SensorStateClass.MEASUREMENT,
+        unit='W',
+        entity_registry_enabled_default=True,
+    ),
+    WeishauptSensorDefinition(
+        key='wtc_kessel_vorlauf_ist_kandidat',
+        name='Kessel-Vorlauftemperatur',
+        mi=0x07, mx=0x00, ox=0x2536, os=0x00, vs=2,
+        group=WeishauptDeviceGroup.WTC,
+        modbus_reg="CanApiJson 07/00/2536/00",
+        entity_registry_enabled_default=True,
+    ),
+    WeishauptSensorDefinition(
+        key='wtc_brenner_sollleistung_kandidat',
+        name='Brenner-Sollleistung',
+        mi=0x07, mx=0x00, ox=0x2542, os=0x00, vs=2,
+        group=WeishauptDeviceGroup.WTC,
+        scale=0.01,
+        unit='%',
+        modbus_reg="CanApiJson 07/00/2542/00",
+        entity_registry_enabled_default=True,
+    ),
+    WeishauptSensorDefinition(
+        key='wtc_geblaese_ansteuerung_kandidat',
+        name='Gebläse-Ansteuersignal',
+        mi=0x07, mx=0x00, ox=0x257E, os=0x00, vs=2,
+        group=WeishauptDeviceGroup.WTC,
+        scale=0.01,
+        unit='%',
+        modbus_reg="CanApiJson 07/00/257E/00",
+        entity_registry_enabled_default=True,
+    ),
+    WeishauptSensorDefinition(
+        key='wtc_brennertaktsperre_kandidat',
+        name='Brennertaktsperre',
+        mi=0x07, mx=0x00, ox=0x250A, os=0x00, vs=1,
+        group=WeishauptDeviceGroup.WTC,
+        modbus_reg="CanApiJson 07/00/250A/00",
+        entity_registry_enabled_default=True,
+    ),
+    WeishauptSensorDefinition(
+        key='wtc_schaltdifferenz_heizbetrieb_kandidat',
+        name='Schaltdifferenz Heizbetrieb',
+        mi=0x07, mx=0x00, ox=0x250D, os=0x02, vs=2,
+        group=WeishauptDeviceGroup.WTC,
+        modbus_reg="CanApiJson 07/00/250D/02",
+        entity_registry_enabled_default=True,
+    ),
+    WeishauptSensorDefinition(
+        key='wtc_brennerleistung_max_heizbetrieb_kandidat',
+        name='Maximale Brennerleistung Heizbetrieb',
+        mi=0x07, mx=0x00, ox=0x2523, os=0x02, vs=2,
+        group=WeishauptDeviceGroup.WTC,
+        modbus_reg="CanApiJson 07/00/2523/02",
+        entity_registry_enabled_default=True,
+    ),
+    WeishauptSensorDefinition(
+        key='wtc_pumpenleistung_min_heizbetrieb_kandidat',
+        name='Minimale Pumpenleistung Heizbetrieb',
+        mi=0x07, mx=0x00, ox=0x256B, os=0x02, vs=1,
+        group=WeishauptDeviceGroup.WTC,
+        unit='%',
+        modbus_reg="CanApiJson 07/00/256B/02",
+        entity_registry_enabled_default=True,
+    ),
+    WeishauptSensorDefinition(
+        key='wtc_pumpenleistung_max_heizbetrieb_kandidat',
+        name='Maximale Pumpenleistung Heizbetrieb',
+        mi=0x07, mx=0x00, ox=0x256C, os=0x02, vs=1,
+        group=WeishauptDeviceGroup.WTC,
+        unit='%',
+        modbus_reg="CanApiJson 07/00/256C/02",
+        entity_registry_enabled_default=True,
+    ),
+    WeishauptSensorDefinition(
+        key='wtc_pumpenregelungsart_kandidat',
+        name='Pumpenregelungsart',
+        mi=0x09, mx=0x01, ox=0x266A, os=0x02, vs=1,
+        group=WeishauptDeviceGroup.WTC,
+        value_map={9: "Konstantdruck Stufe 2"},
+        modbus_reg="CanApiJson 09/01/266A/02",
+        entity_registry_enabled_default=True,
+    ),
+    WeishauptSensorDefinition(
+        key='wtc_vpt_max_volumenstrom_kandidat',
+        name='Maximaler VPT-Volumenstrom',
+        mi=0x09, mx=0x01, ox=0x2629, os=0x02, vs=2,
+        group=WeishauptDeviceGroup.WTC,
+        modbus_reg="CanApiJson 09/01/2629/02",
+        entity_registry_enabled_default=True,
+    ),
+])
+# END WTC READ-ONLY SENSORS
 
 # ============================================================================
 # All sensor definitions combined

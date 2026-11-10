@@ -55,6 +55,18 @@ SYSTABLE_DEVICE_GROUP_MARKERS = {
 }
 
 HK1_SENSOR_KEYS = {
+    "sg_heizkurvensteilheit_hk1",
+    "sg_heizkurve_parallelverschiebung_hk1",
+    "sg_vorlaufsolltemperatur_heizgrenze_hk1",
+    "sg_frostschutz_aussentemperatur_hk1",
+    "sg_aufheizoptimierung_hk1",
+    "sg_gebaeudebauweise_hk1",
+    "sg_niveauanhebung_aussentemperatur_hk1",
+    "sg_warmwasserprioritaet_hk1",
+    "sg_raumsolltemperatur_heizgrenze_hk1",
+    "sg_vorlaufsolltemperatur_minimal_hk1",
+    "sg_vorlaufsolltemperatur_maximal_hk1",
+    "sg_sowi_umschalttemperatur_hk1",
     "sg_betriebsart_hk1_vorgabe",
     "sg_sowi_umschaltung_hk1",
     "sg_betriebsart_hk1_aktuell",
