@@ -797,13 +797,34 @@ than the observed values still need cross-device validation.
 
 No controller setting changes were made.
 
-### Experimental WTC candidate diagnostics (opt-in)
+### WTC read-only sensors — standard polling (development branch)
 
-PR #14 adds 13 read-only WTC research candidates. Three responsive
-candidates use regular polling. The other ten **do not send any requests
-by default**; enable *slow polling of unverified WTC research registers*
-in integration options to read one additional candidate every 180 seconds.
-Hardware support, register meaning, scales, and sensor freshness are not
-guaranteed. The burner-output candidate still needs field validation in
-regular Home Assistant polling. See `docs/wtc-13-candidate-polling.md`
-and `scripts/wtc13_probe.py` for safe one-shot read diagnostics.
+PR #14 exposes 13 read-only WTC registers directly under the **WTC Brennwertgerät**
+device as standard sensor entities (not Diagnostic entities). Existing entity
+unique IDs are preserved. The regular coordinator now polls the 13 values along
+with other WTC data; the separate 180-second opt-in research scheduler has been
+removed. Default scan interval is **60 seconds**, and users should explicitly
+configure 60 seconds on an existing installation.
+
+**Important:** The observations are preliminary. In particular, full-batch
+stability with all 13 candidates has not yet been proven, and some meanings,
+units, scales, and enum mappings remain unconfirmed. Hardware verification is recorded separately from display naming. Avoid simultaneous standalone probing and enable neither
+legacy experimental catalog unless needed. See
+`docs/wtc-13-candidate-polling.md` for observation details and safety limits.
+
+### WTC read-only sensor names and display checks (2026-11-10)
+
+All 13 additional WTC read-only sensors use clean, normal display names without
+`(Kandidat)` or `(unbestätigt)`; they belong to the WTC boiler device and not
+to the Diagnostic entity category. **Keys are intentionally unchanged**, even
+where they end in `_kandidat`, so the Home Assistant entity registry preserves
+existing unique IDs. Regular polling uses the 60-second default; existing user
+options must be set to 60 seconds explicitly.
+
+On the tested WTC-GW 15-B, controller readouts matched the internal pump
+power (11 W), minimum/maximum pump settings (30/80 %), and paired direct reads
+of burner target (1569 -> 15.69 %) and blower control (1042 -> 10.42 %,
+1041 -> 10.41 %). Pump mode raw 9 mapped to Konstantdruck Stufe 2 on this
+unit. Other values remain raw until their meaning is independently checked;
+neutral presentation names are not proof of broad validation. Stability of
+all 13 in regular batches needs monitoring. See the observations document.

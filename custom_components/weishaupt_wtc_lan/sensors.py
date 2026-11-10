@@ -2000,148 +2000,131 @@ SOL_SENSORS: list[WeishauptSensorDefinition] = [
 ]
 
 
-# BEGIN WTC BULK DIAGNOSTIC SENSORS (weishaupt_alle_13_ha.py)
-# Three hardware-responsive registers use normal HA polling.
-# Ten additional candidates use a rate-limited coordinator scheduler.
-# The additional candidate identities/scales are unconfirmed.
+# BEGIN WTC READ-ONLY SENSORS
+# Ordinary WTC polling; preserve stable sensor keys and entity unique IDs.
+# Some register semantics still need further WTC display verification.
 WTC_SENSORS.extend([
     WeishauptSensorDefinition(
         key='wtc_brenner_istleistung_kandidat',
-        name='Brenner-Istleistung (Kandidat)',
+        name='Brenner-Istleistung',
         mi=0x07, mx=0x00, ox=0x2534, os=0x00, vs=2,
         group=WeishauptDeviceGroup.WTC,
-        modbus_reg="CanApiJson candidate 07/00/2534/00",
+        modbus_reg="CanApiJson 07/00/2534/00",
         state_class=SensorStateClass.MEASUREMENT,
         unit='%',
         scale=0.01,
-        entity_category="diagnostic",
         entity_registry_enabled_default=True,
     ),
     WeishauptSensorDefinition(
         key='wtc_geblaesedrehzahl_kandidat',
-        name='Gebläsedrehzahl (Kandidat)',
+        name='Gebläsedrehzahl',
         mi=0x07, mx=0x00, ox=0x2540, os=0x00, vs=2,
         group=WeishauptDeviceGroup.WTC,
-        modbus_reg="CanApiJson candidate 07/00/2540/00",
+        modbus_reg="CanApiJson 07/00/2540/00",
         state_class=SensorStateClass.MEASUREMENT,
         unit='rpm',
-        entity_category="diagnostic",
         entity_registry_enabled_default=True,
     ),
     WeishauptSensorDefinition(
         key='wtc_pumpe_intern_elektrische_leistung_kandidat',
-        name='Interne Pumpe elektrische Leistung (Kandidat)',
+        name='Interne Pumpe elektrische Leistung',
         mi=0x09, mx=0x01, ox=0x261B, os=0x02, vs=1,
         request_vs=2,
         group=WeishauptDeviceGroup.WTC,
-        modbus_reg="CanApiJson candidate 09/01/261B/02",
+        modbus_reg="CanApiJson 09/01/261B/02",
         state_class=SensorStateClass.MEASUREMENT,
         unit='W',
-        entity_category="diagnostic",
         entity_registry_enabled_default=True,
     ),
     WeishauptSensorDefinition(
         key='wtc_kessel_vorlauf_ist_kandidat',
-        name='Kessel-Vorlauftemperatur (unbestätigt)',
+        name='Kessel-Vorlauftemperatur',
         mi=0x07, mx=0x00, ox=0x2536, os=0x00, vs=2,
         group=WeishauptDeviceGroup.WTC,
-        modbus_reg="CanApiJson candidate 07/00/2536/00",
-        entity_category="diagnostic",
+        modbus_reg="CanApiJson 07/00/2536/00",
         entity_registry_enabled_default=True,
-        poll=False,  # polled slowly by coordinator, NOT every HA refresh
     ),
     WeishauptSensorDefinition(
         key='wtc_brenner_sollleistung_kandidat',
-        name='Brenner-Sollleistung (unbestätigt)',
+        name='Brenner-Sollleistung',
         mi=0x07, mx=0x00, ox=0x2542, os=0x00, vs=2,
         group=WeishauptDeviceGroup.WTC,
-        modbus_reg="CanApiJson candidate 07/00/2542/00",
-        entity_category="diagnostic",
+        scale=0.01,
+        unit='%',
+        modbus_reg="CanApiJson 07/00/2542/00",
         entity_registry_enabled_default=True,
-        poll=False,  # polled slowly by coordinator, NOT every HA refresh
     ),
     WeishauptSensorDefinition(
         key='wtc_geblaese_ansteuerung_kandidat',
-        name='Gebläse-Ansteuerung (unbestätigt)',
+        name='Gebläse-Ansteuersignal',
         mi=0x07, mx=0x00, ox=0x257E, os=0x00, vs=2,
         group=WeishauptDeviceGroup.WTC,
-        modbus_reg="CanApiJson candidate 07/00/257E/00",
-        entity_category="diagnostic",
+        scale=0.01,
+        unit='%',
+        modbus_reg="CanApiJson 07/00/257E/00",
         entity_registry_enabled_default=True,
-        poll=False,  # polled slowly by coordinator, NOT every HA refresh
     ),
     WeishauptSensorDefinition(
         key='wtc_brennertaktsperre_kandidat',
-        name='Brennertaktsperre (unbestätigt)',
+        name='Brennertaktsperre',
         mi=0x07, mx=0x00, ox=0x250A, os=0x00, vs=1,
         group=WeishauptDeviceGroup.WTC,
-        modbus_reg="CanApiJson candidate 07/00/250A/00",
-        entity_category="diagnostic",
+        modbus_reg="CanApiJson 07/00/250A/00",
         entity_registry_enabled_default=True,
-        poll=False,  # polled slowly by coordinator, NOT every HA refresh
     ),
     WeishauptSensorDefinition(
         key='wtc_schaltdifferenz_heizbetrieb_kandidat',
-        name='Schaltdifferenz Heizbetrieb (unbestätigt)',
+        name='Schaltdifferenz Heizbetrieb',
         mi=0x07, mx=0x00, ox=0x250D, os=0x02, vs=2,
         group=WeishauptDeviceGroup.WTC,
-        modbus_reg="CanApiJson candidate 07/00/250D/02",
-        entity_category="diagnostic",
+        modbus_reg="CanApiJson 07/00/250D/02",
         entity_registry_enabled_default=True,
-        poll=False,  # polled slowly by coordinator, NOT every HA refresh
     ),
     WeishauptSensorDefinition(
         key='wtc_brennerleistung_max_heizbetrieb_kandidat',
-        name='Maximale Brennerleistung Heizbetrieb (unbestätigt)',
+        name='Maximale Brennerleistung Heizbetrieb',
         mi=0x07, mx=0x00, ox=0x2523, os=0x02, vs=2,
         group=WeishauptDeviceGroup.WTC,
-        modbus_reg="CanApiJson candidate 07/00/2523/02",
-        entity_category="diagnostic",
+        modbus_reg="CanApiJson 07/00/2523/02",
         entity_registry_enabled_default=True,
-        poll=False,  # polled slowly by coordinator, NOT every HA refresh
     ),
     WeishauptSensorDefinition(
         key='wtc_pumpenleistung_min_heizbetrieb_kandidat',
-        name='Minimale Pumpenleistung Heizbetrieb (unbestätigt)',
+        name='Minimale Pumpenleistung Heizbetrieb',
         mi=0x07, mx=0x00, ox=0x256B, os=0x02, vs=1,
         group=WeishauptDeviceGroup.WTC,
-        modbus_reg="CanApiJson candidate 07/00/256B/02",
-        entity_category="diagnostic",
+        unit='%',
+        modbus_reg="CanApiJson 07/00/256B/02",
         entity_registry_enabled_default=True,
-        poll=False,  # polled slowly by coordinator, NOT every HA refresh
     ),
     WeishauptSensorDefinition(
         key='wtc_pumpenleistung_max_heizbetrieb_kandidat',
-        name='Maximale Pumpenleistung Heizbetrieb (unbestätigt)',
+        name='Maximale Pumpenleistung Heizbetrieb',
         mi=0x07, mx=0x00, ox=0x256C, os=0x02, vs=1,
         group=WeishauptDeviceGroup.WTC,
-        modbus_reg="CanApiJson candidate 07/00/256C/02",
-        entity_category="diagnostic",
+        unit='%',
+        modbus_reg="CanApiJson 07/00/256C/02",
         entity_registry_enabled_default=True,
-        poll=False,  # polled slowly by coordinator, NOT every HA refresh
     ),
     WeishauptSensorDefinition(
         key='wtc_pumpenregelungsart_kandidat',
-        name='Pumpenregelungsart (unbestätigt)',
+        name='Pumpenregelungsart',
         mi=0x09, mx=0x01, ox=0x266A, os=0x02, vs=1,
         group=WeishauptDeviceGroup.WTC,
-        modbus_reg="CanApiJson candidate 09/01/266A/02",
-        entity_category="diagnostic",
+        value_map={9: "Konstantdruck Stufe 2"},
+        modbus_reg="CanApiJson 09/01/266A/02",
         entity_registry_enabled_default=True,
-        poll=False,  # polled slowly by coordinator, NOT every HA refresh
     ),
     WeishauptSensorDefinition(
         key='wtc_vpt_max_volumenstrom_kandidat',
-        name='Maximaler VPT-Volumenstrom (unbestätigt)',
+        name='Maximaler VPT-Volumenstrom',
         mi=0x09, mx=0x01, ox=0x2629, os=0x02, vs=2,
         group=WeishauptDeviceGroup.WTC,
-        modbus_reg="CanApiJson candidate 09/01/2629/02",
-        entity_category="diagnostic",
+        modbus_reg="CanApiJson 09/01/2629/02",
         entity_registry_enabled_default=True,
-        poll=False,  # polled slowly by coordinator, NOT every HA refresh
     ),
 ])
-# END WTC BULK DIAGNOSTIC SENSORS
+# END WTC READ-ONLY SENSORS
 
 # ============================================================================
 # All sensor definitions combined

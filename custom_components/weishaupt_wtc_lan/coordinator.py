@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import time
 import logging
 from collections import OrderedDict
 from collections.abc import Awaitable, Callable
@@ -29,23 +28,6 @@ _LOGGER = logging.getLogger(__name__)
 NETWORK_REFRESH_INTERVAL = timedelta(minutes=10)
 WRITE_DEBOUNCE_SECONDS = 0.75
 POST_WRITE_SETTLE_SECONDS = 10
-
-# BEGIN WTC 13 RESEARCH POLLING CONSTANTS
-# Source-backed hypotheses; not all hardware-verified via CanApiJson.
-WTC_RESEARCH_SLOW_POLL_KEYS = frozenset({
-    'wtc_kessel_vorlauf_ist_kandidat',
-    'wtc_brenner_sollleistung_kandidat',
-    'wtc_geblaese_ansteuerung_kandidat',
-    'wtc_brennertaktsperre_kandidat',
-    'wtc_schaltdifferenz_heizbetrieb_kandidat',
-    'wtc_brennerleistung_max_heizbetrieb_kandidat',
-    'wtc_pumpenleistung_min_heizbetrieb_kandidat',
-    'wtc_pumpenleistung_max_heizbetrieb_kandidat',
-    'wtc_pumpenregelungsart_kandidat',
-    'wtc_vpt_max_volumenstrom_kandidat',
-})
-WTC_RESEARCH_SLOW_POLL_GAP_SECONDS = 180.0
-# END WTC 13 RESEARCH POLLING CONSTANTS
 
 DEBUG_STATE_KEYS = {
     "sg_betriebsart_hk1_vorgabe",
@@ -102,7 +84,6 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         extended_experimental_wtc_registers: list[ExperimentalWtcRegister] | None = None,
         static_data: dict[str, Any] | None = None,
         network_refresh_callback: Callable[[], Awaitable[dict[str, Any]]] | None = None,
-        enable_wtc_research_polling: bool = False,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
@@ -126,7 +107,6 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self.static_data = static_data or {}
         self.network_refresh_callback = network_refresh_callback
-        self.enable_wtc_research_polling = enable_wtc_research_polling
         self._last_network_refresh = (
             datetime.now(timezone.utc) if network_refresh_callback is not None else None
         )
@@ -348,65 +328,6 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_network_refresh = now
         return bool(network_data)
 
-    # BEGIN WTC 13 CANDIDATE SAFE POLLING
-    async def _async_poll_one_wtc_research_register(self) -> dict[str, Any]:
-        """Read one unconfirmed register per 180 s, separately from regular polls.
-
-        Prevent an unsupported register from affecting a batch of known sensors.
-        A communication failure disables experimental polling until HA restart.
-        A missing response / unsupported register is kept unavailable.
-        """
-        if not self.enable_wtc_research_polling:
-            return {}
-        if getattr(self, "_wtc_research_poll_paused", False):
-            return {}
-        candidates = [
-            d for d in self.sensor_definitions
-            if d.key in WTC_RESEARCH_SLOW_POLL_KEYS and not d.poll
-        ]
-        if not candidates:
-            return {}
-        now = time.monotonic()
-        last = getattr(self, "_wtc_research_last_poll", None)
-        if last is not None and now - last < WTC_RESEARCH_SLOW_POLL_GAP_SECONDS:
-            return {}
-
-        index = getattr(self, "_wtc_research_next_index", 0)
-        sensor_def = candidates[index % len(candidates)]
-        self._wtc_research_next_index = index + 1
-        self._wtc_research_last_poll = now
-        param = {
-            "key": sensor_def.key,
-            "mi": sensor_def.mi,
-            "mx": sensor_def.mx,
-            "ox": sensor_def.ox,
-            "os": sensor_def.os,
-            "vs": sensor_def.vs,
-            "request_vs": sensor_def.request_vs or sensor_def.vs,
-        }
-        try:
-            response = await self.client.read_parameters([param])
-        except Exception:
-            self._wtc_research_poll_paused = True
-            _LOGGER.exception(
-                "WTC research polling paused after communication/processing error"
-            )
-            return {}
-
-        if getattr(self.client, "last_read_failed_batches", 0):
-            self._wtc_research_poll_paused = True
-            _LOGGER.warning(
-                "WTC research polling paused after failed read; key=%s", sensor_def.key
-            )
-            return {}
-        if sensor_def.key not in response:
-            _LOGGER.info("Unconfirmed WTC candidate not supported/no data: %s", sensor_def.key)
-            return {}
-        _LOGGER.info("WTC research candidate received response: %s", sensor_def.key)
-        return {sensor_def.key: response[sensor_def.key]}
-
-    # END WTC 13 CANDIDATE SAFE POLLING
-
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from the Weishaupt device."""
         if await self._writes_pending_or_settling():
@@ -465,10 +386,6 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "Weishaupt refresh completed with %s failed read batch(es); retaining last good values where available",
                 failed_batches,
             )
-        # BEGIN WTC 13 CANDIDATE SAFE POLLING HOOK
-        # One separate, rate-limited read for the unconfirmed candidates.
-        results.update(await self._async_poll_one_wtc_research_register())
-        # END WTC 13 CANDIDATE SAFE POLLING HOOK
         self._last_good_dynamic_data.update(results)
 
         definitions_by_key = {

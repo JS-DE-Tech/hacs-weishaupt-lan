@@ -198,8 +198,8 @@ class ConfigFlowTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn("enable_experimental_wtc_sensors", schema)
         self.assertIn("enable_extended_experimental_wtc_sensors", schema)
-        self.assertIn("enable_wtc_research_polling", schema)
-        self.assertFalse(config_flow._normalize_user_input({"scan_interval": 30})["enable_wtc_research_polling"])
+        self.assertNotIn("enable_wtc_research_polling", schema)
+        self.assertNotIn("enable_wtc_research_polling", config_flow._normalize_user_input({"scan_interval": 30}))
         self.assertFalse(
             config_flow._normalize_user_input(
                 {"scan_interval": 30}

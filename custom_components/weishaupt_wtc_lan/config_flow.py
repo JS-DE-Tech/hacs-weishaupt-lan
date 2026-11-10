@@ -20,11 +20,9 @@ from .api import (
 from .const import (
     CONF_DETECTED_HEATING_CIRCUIT_NAMES,
     CONF_ENABLE_EXTENDED_EXPERIMENTAL_WTC_SENSORS,
-    CONF_ENABLE_WTC_RESEARCH_POLLING,
     CONF_ENABLE_EXPERIMENTAL_WTC_SENSORS,
     DEFAULT_PASSWORD,
     DEFAULT_ENABLE_EXTENDED_EXPERIMENTAL_WTC_SENSORS,
-    DEFAULT_ENABLE_WTC_RESEARCH_POLLING,
     DEFAULT_ENABLE_EXPERIMENTAL_WTC_SENSORS,
     DEFAULT_HEATING_CIRCUIT_NAMES,
     DEFAULT_USE_DETECTED_HEATING_CIRCUIT_NAMES,
@@ -86,13 +84,6 @@ def _data_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                     defaults.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
                 ),
             ): SCAN_INTERVAL_SELECTOR,
-            vol.Optional(
-                CONF_ENABLE_WTC_RESEARCH_POLLING,
-                default=defaults.get(
-                    CONF_ENABLE_WTC_RESEARCH_POLLING,
-                    DEFAULT_ENABLE_WTC_RESEARCH_POLLING,
-                ),
-            ): bool,
             vol.Optional(
                 CONF_ENABLE_EXPERIMENTAL_WTC_SENSORS,
                 default=defaults.get(
@@ -169,13 +160,6 @@ def _options_schema(defaults: dict[str, Any]) -> vol.Schema:
                 default=defaults.get(CONF_HK3_NAME, DEFAULT_HEATING_CIRCUIT_NAMES[3]),
             ): str,
             vol.Optional(
-                CONF_ENABLE_WTC_RESEARCH_POLLING,
-                default=defaults.get(
-                    CONF_ENABLE_WTC_RESEARCH_POLLING,
-                    DEFAULT_ENABLE_WTC_RESEARCH_POLLING,
-                ),
-            ): bool,
-            vol.Optional(
                 CONF_ENABLE_EXPERIMENTAL_WTC_SENSORS,
                 default=defaults.get(
                     CONF_ENABLE_EXPERIMENTAL_WTC_SENSORS,
@@ -198,9 +182,6 @@ def _normalize_user_input(user_input: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(user_input)
     normalized[CONF_SCAN_INTERVAL] = _scan_interval_default(
         normalized.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-    )
-    normalized[CONF_ENABLE_WTC_RESEARCH_POLLING] = bool(
-        normalized.get(CONF_ENABLE_WTC_RESEARCH_POLLING, DEFAULT_ENABLE_WTC_RESEARCH_POLLING)
     )
     normalized[CONF_ENABLE_EXPERIMENTAL_WTC_SENSORS] = bool(
         normalized.get(

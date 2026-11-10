@@ -373,6 +373,36 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
                 }
                 self.assertTrue(entity.available)
 
+    def test_wtc_display_verified_target_and_blower_percentages(self) -> None:
+        """WTC-GW 15-B display comparison confirms both 0.01 percent scales."""
+        samples = (
+            ("wtc_brenner_sollleistung_kandidat", 0x2542, 1569, 15.69),
+            ("wtc_geblaese_ansteuerung_kandidat", 0x257E, 1042, 10.42),
+            ("wtc_geblaese_ansteuerung_kandidat", 0x257E, 1041, 10.41),
+        )
+        for key, ox, raw, expected in samples:
+            with self.subTest(key=key, raw=raw):
+                definition = sensor_by_key(key)
+                self.assertEqual(definition.ox, ox)
+                self.assertEqual(definition.unit, "%")
+                self.assertEqual(definition.scale, 0.01)
+                self.assertEqual(definition.group, sensors.WeishauptDeviceGroup.WTC)
+                self.assertIsNone(definition.entity_category)
+                self.assertTrue(definition.poll)
+                coordinator = SimpleNamespace(
+                    data={key: {"value_int": raw, "value_hex": f"{raw:04x}"}}
+                )
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=coordinator,
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="entry-123"),
+                )
+                self.assertEqual(entity._attr_unique_id, f"entry-123_{key}")
+                self.assertEqual(entity.native_value, expected)
+                coordinator.data[key] = {"value_int": 0, "value_hex": "0000"}
+                self.assertTrue(entity.available)
+                self.assertEqual(entity.native_value, 0.0)
+
     async def test_hk1_efficiency_settings(self) -> None:
         """Validate three read-only HK1 efficiency settings."""
         samples = {
@@ -1011,6 +1041,39 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
             entity for entity in added if entity._sensor_def.key == "hk_betriebsart_vorgabe"
         )
         self.assertEqual(hk2_select.current_option, "Zeitprogramm 1")
+
+
+
+    def test_wtc_candidate_entities_are_regular_wtc_sensors(self) -> None:
+        """13 WTC candidates retain stable IDs and appear as ordinary WTC sensors."""
+        keys = {key for key in (
+            "wtc_brenner_istleistung_kandidat",
+            "wtc_geblaesedrehzahl_kandidat",
+            "wtc_pumpe_intern_elektrische_leistung_kandidat",
+            "wtc_kessel_vorlauf_ist_kandidat",
+            "wtc_brenner_sollleistung_kandidat",
+            "wtc_geblaese_ansteuerung_kandidat",
+            "wtc_brennertaktsperre_kandidat",
+            "wtc_schaltdifferenz_heizbetrieb_kandidat",
+            "wtc_brennerleistung_max_heizbetrieb_kandidat",
+            "wtc_pumpenleistung_min_heizbetrieb_kandidat",
+            "wtc_pumpenleistung_max_heizbetrieb_kandidat",
+            "wtc_pumpenregelungsart_kandidat",
+            "wtc_vpt_max_volumenstrom_kandidat",
+        )}
+        definitions = [d for d in sensors.WTC_SENSORS if d.key in keys]
+        self.assertEqual(len(definitions), 13)
+        for definition in definitions:
+            with self.subTest(key=definition.key):
+                self.assertIsNone(definition.entity_category)
+                self.assertTrue(definition.poll)
+                self.assertEqual(definition.group, sensors.WeishauptDeviceGroup.WTC)
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator=SimpleNamespace(data={}),
+                    sensor_def=definition,
+                    entry=SimpleNamespace(entry_id="test-entry"),
+                )
+                self.assertEqual(entity._attr_unique_id, f"test-entry_{definition.key}")
 
 
 if __name__ == "__main__":

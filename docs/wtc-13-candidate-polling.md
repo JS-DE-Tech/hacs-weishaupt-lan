@@ -1,56 +1,65 @@
-# WTC 13 candidate sensors — cautious CanApiJson validation
+# PR #14 — normal WTC sensor polling (60-second default)
 
-This change exposes 13 read-only candidate entities on the WTC device, while
-keeping all pre-existing device/HK1 entities and their identifiers untouched.
+## Summary
 
-**Observed on a WTC-GW 15-B, 2026-11-10 (UTC):**
+The 13 read-only WTC sensor entities are assigned directly to the existing
+**WTC Brennwertgerät** device as ordinary sensor entities. Their existing sensor
+keys / Home Assistant unique IDs are preserved. No entities are categorized as
+`diagnostic`. The extra research-only round-robin polling path, 180-second
+rate limit, and the research opt-in toggle have been removed.
 
-| Read address | Requested VS | Reply VS | Observed | Meaning (provisional) |
-|---|---:|---:|---:|---|
-| `07/00/2534/00` | 2 | 2 | `0x06A0` = 1696 | 16.96% burner output |
-| `07/00/2540/00` | 2 | 2 | `0x03F8` = 1016 | 1016 rpm blower speed |
-| `09/01/261B/02` | 2 | 1 | `0x0C` = 12 | 12 W internal pump power |
+All 13 are now read alongside ordinary sensor definitions through the existing
+coordinator and CanApiJson batch reader. The default integration interval is
+**60 seconds** (still user-configurable). Existing configured intervals are not
+overwritten; users of this development branch should set 60 seconds explicitly.
+The separate legacy experimental catalogs remain disabled by default.
 
-CAN documentation corroborates the proposed meaning. Independent comparison
-against the WEM portal or device display remains desirable. The other ten
-addresses/VS/scales are **candidate hypotheses**, NOT hardware-verified reads.
-Source references:
-- https://github.com/geronet1/wem-python
-- https://github.com/jvejmelka/weishaupt-wem-can-esphome/blob/main/PROTOKOLL.md
+## Important cautions
 
-## Polling behavior
+A 60-second interval was reported to restore stable operation on one
+WTC-GW 15-B installation, but **long-term stability with all 13 registers in
+normal batches has not yet been demonstrated**. More registers per cycle
+increase traffic and previously some batch reads failed even when standalone
+requests succeeded. Watch for failed batches or unavailable sensors.
+Do not merge as universally stable solely based on local observations.
 
-The three one-shot responsive sensors use normal coordinator polling. The other
-ten unverified registers are polled **only after explicit opt-in** through
-the `Enable slow polling of unverified WTC research registers` setup/options
-toggle (default OFF). When enabled, those
-ten unverified candidate entities are `poll=False` in the normal loop and read
-**one at a time**, using a separate one-register CanApiJson GET, at most once
-per 180 seconds **total**. Thus each candidate is revisited every ~30 minutes
-(assuming successful regular updates and no interruptions). They never send SET.
+These sensor IDs still carry `_kandidat` to preserve entity-registry identity.
+Display names are clean and ordinary WTC labels; no unsupported scale or enum
+mapping is inferred. *Internal pump electrical power* had matching 11 W
+HA/display readings (not time-synchronized). All calls remain read-only (GET).
 
-The slow polling loop disables itself until the next Home Assistant restart on
-HTTP/communication failures or failed batches. A device CMD_ERROR is treated
-as no supported data, not a numeric state. Returning a valid reply is necessary
-but not sufficient to validate its interpretation, unit or scale. Do not claim
-hardware validation for all 13 or merge them as production-stable without
-further evidence. Keep both existing experimental catalog options disabled to
-avoid duplicate probing.
+## Hardware display comparisons — 2026-11-10
 
-### Known limitation
+- Internal pump electrical power: Home Assistant **11 W**, WTC display **11 W**.
+  The 50% pump command is *a different physical quantity*.
+- Minimum/maximum pump limits: 30 / 80 in HA vs 30% / 80% on display.
+- Flow temperature target: 42.3 °C in both readings.
+- Burner actual output: 19.1% HA vs 21.9% display at different times (plausible,
+  not a simultaneous validation).
+- Blower speed: 1121 rpm HA vs 1048 rpm display at different times (plausible).
+- Burner target output: raw 0 at a prior time vs 17.2% display (unresolved).
+- Fan control signal: raw 1312 vs 11.2% display (mapping unresolved).
+- Pump control mode: raw 9 vs Konstantdruck Stufe 2 (provisional enum candidate).
+- Max VPT flow: raw 2200 from standalone test, sometimes unavailable in HA.
 
-The burner output `07/00/2534/00` succeeded as a stand-alone GET, but was
-`unavailable` when included in the integration's regular read batches. This
-change does not claim to resolve the underlying intermittent/matching issue.
-Investigate response VS/addresses and logs before advertising reliable live
-burner output. The independent slow polling does not change this sensor.
+No write operations or changes to heating settings were performed.
 
-## Reproducible one-shot validation
+## Reproducible read-only validation
 
-Run `python3 scripts/wtc13_probe.py --host <WEM-LAN-IP>` on a machine
-that can reach the WEM system device, using a password prompt or
-`WEM_PASSWORD` environment variable. The script performs **13 individual GETs**
-with a minimum three-second pause, rejects address/VS mismatches and
-stops after a transport failure. It never sends a SET. Save the JSON result
-outside the repository and compare observed values with the controller.
-No live reads can be performed from the GitHub repository alone.
+The one-shot `scripts/wtc13_probe.py` still performs 13 individual GET requests
+with at least three seconds pause; do not run it continuously alongside HA.
+Read dynamic values simultaneously on the WTC display and in HA. Preserve raw
+VG responses and the exact timestamps. Only confirm an enum or scale after
+repeatability across more than one observed condition. Follow the companion
+observations document for register addresses and caveats.
+
+## Display naming and validation status (2026-11-10)
+
+The 13 extra WTC sensors have ordinary, suffix-free display names and use
+the existing WTC device. The entity keys still carry `_kandidat` by design:
+changing keys would create new HA entities and break existing unique IDs.
+Register responses were confirmed on one WTC-GW 15-B; semantics of some
+raw readings (e.g. heating differential, boiler flow value and maximal VPT
+flow) have not been cross-checked. Unit/scale were only set where evidence
+supports them. See the 2026-11-10 observation log for the two repeated
+percentage-register comparisons and pump observations.

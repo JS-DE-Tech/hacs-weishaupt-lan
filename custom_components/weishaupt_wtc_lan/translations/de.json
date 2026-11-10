@@ -12,8 +12,7 @@
                     "hk1_name": "Name Heizkreis 1",
                     "hk2_name": "Name Heizkreis 2",
                     "hk3_name": "Name Heizkreis 3",
-                    "enable_experimental_wtc_sensors": "Experimentelle schreibgeschuetzte WTC-Sensoren aktivieren",
-                    "enable_wtc_research_polling": "Unbestätigte WTC-Forschungsregister langsam abfragen (optional)"
+                    "enable_experimental_wtc_sensors": "Experimentelle schreibgeschuetzte WTC-Sensoren aktivieren"
                 }
             }
         },
@@ -36,8 +35,7 @@
                     "hk1_name": "Name Heizkreis 1",
                     "hk2_name": "Name Heizkreis 2",
                     "hk3_name": "Name Heizkreis 3",
-                    "enable_experimental_wtc_sensors": "Experimentelle schreibgeschuetzte WTC-Sensoren aktivieren",
-                    "enable_wtc_research_polling": "Unbestätigte WTC-Forschungsregister langsam abfragen (optional)"
+                    "enable_experimental_wtc_sensors": "Experimentelle schreibgeschuetzte WTC-Sensoren aktivieren"
                 }
             }
         }
