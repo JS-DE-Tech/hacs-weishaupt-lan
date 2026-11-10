@@ -22,6 +22,7 @@ from .api import ProbeStatus, WeishauptApiClient
 from .const import (
     CONF_DETECTED_HEATING_CIRCUIT_NAMES,
     CONF_ENABLE_EXTENDED_EXPERIMENTAL_WTC_SENSORS,
+    CONF_ENABLE_WTC_RESEARCH_POLLING,
     CONF_ENABLE_EXPERIMENTAL_WTC_SENSORS,
     CONF_HK1_NAME,
     CONF_HK2_NAME,
@@ -29,6 +30,7 @@ from .const import (
     CONF_SCAN_INTERVAL,
     CONF_USE_DETECTED_HEATING_CIRCUIT_NAMES,
     DEFAULT_ENABLE_EXTENDED_EXPERIMENTAL_WTC_SENSORS,
+    DEFAULT_ENABLE_WTC_RESEARCH_POLLING,
     DEFAULT_ENABLE_EXPERIMENTAL_WTC_SENSORS,
     DEFAULT_HEATING_CIRCUIT_NAMES,
     DEFAULT_USE_DETECTED_HEATING_CIRCUIT_NAMES,
@@ -781,6 +783,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ),
         )
     )
+    enable_wtc_research_polling = bool(
+        entry.options.get(
+            CONF_ENABLE_WTC_RESEARCH_POLLING,
+            entry.data.get(CONF_ENABLE_WTC_RESEARCH_POLLING, DEFAULT_ENABLE_WTC_RESEARCH_POLLING),
+        )
+    )
     use_detected_heating_circuit_names = bool(
         entry.options.get(
             CONF_USE_DETECTED_HEATING_CIRCUIT_NAMES,
@@ -933,6 +941,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         active_device_groups=active_device_groups,
         experimental_wtc_registers=experimental_wtc_registers,
         extended_experimental_wtc_registers=extended_experimental_wtc_registers,
+        enable_wtc_research_polling=enable_wtc_research_polling,
         static_data=static_data,
         network_refresh_callback=lambda: _async_read_network_diagnostics(client),
     )

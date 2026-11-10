@@ -21,6 +21,9 @@ Source references:
 ## Polling behavior
 
 The three one-shot responsive sensors use normal coordinator polling. The other
+ten unverified registers are polled **only after explicit opt-in** through
+the `Enable slow polling of unverified WTC research registers` setup/options
+toggle (default OFF). When enabled, those
 ten unverified candidate entities are `poll=False` in the normal loop and read
 **one at a time**, using a separate one-register CanApiJson GET, at most once
 per 180 seconds **total**. Thus each candidate is revisited every ~30 minutes
@@ -41,3 +44,13 @@ The burner output `07/00/2534/00` succeeded as a stand-alone GET, but was
 change does not claim to resolve the underlying intermittent/matching issue.
 Investigate response VS/addresses and logs before advertising reliable live
 burner output. The independent slow polling does not change this sensor.
+
+## Reproducible one-shot validation
+
+Run `python3 scripts/wtc13_probe.py --host <WEM-LAN-IP>` on a machine
+that can reach the WEM system device, using a password prompt or
+`WEM_PASSWORD` environment variable. The script performs **13 individual GETs**
+with a minimum three-second pause, rejects address/VS mismatches and
+stops after a transport failure. It never sends a SET. Save the JSON result
+outside the repository and compare observed values with the controller.
+No live reads can be performed from the GitHub repository alone.

@@ -102,6 +102,7 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         extended_experimental_wtc_registers: list[ExperimentalWtcRegister] | None = None,
         static_data: dict[str, Any] | None = None,
         network_refresh_callback: Callable[[], Awaitable[dict[str, Any]]] | None = None,
+        enable_wtc_research_polling: bool = False,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
@@ -125,6 +126,7 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self.static_data = static_data or {}
         self.network_refresh_callback = network_refresh_callback
+        self.enable_wtc_research_polling = enable_wtc_research_polling
         self._last_network_refresh = (
             datetime.now(timezone.utc) if network_refresh_callback is not None else None
         )
@@ -354,6 +356,8 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         A communication failure disables experimental polling until HA restart.
         A missing response / unsupported register is kept unavailable.
         """
+        if not self.enable_wtc_research_polling:
+            return {}
         if getattr(self, "_wtc_research_poll_paused", False):
             return {}
         candidates = [

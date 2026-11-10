@@ -796,3 +796,14 @@ corresponded to "Off" on the tested controller. Enum states other
 than the observed values still need cross-device validation.
 
 No controller setting changes were made.
+
+### Experimental WTC candidate diagnostics (opt-in)
+
+PR #14 adds 13 read-only WTC research candidates. Three responsive
+candidates use regular polling. The other ten **do not send any requests
+by default**; enable *slow polling of unverified WTC research registers*
+in integration options to read one additional candidate every 180 seconds.
+Hardware support, register meaning, scales, and sensor freshness are not
+guaranteed. The burner-output candidate still needs field validation in
+regular Home Assistant polling. See `docs/wtc-13-candidate-polling.md`
+and `scripts/wtc13_probe.py` for safe one-shot read diagnostics.

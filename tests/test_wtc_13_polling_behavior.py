@@ -52,12 +52,22 @@ def make_defs():
 
 
 class SlowPollingBehaviorTests(unittest.IsolatedAsyncioTestCase):
+    async def test_disabled_by_default_does_not_send_requests(self):
+        clock = [0.0]
+        coordinator = extracted_method_class(clock)()
+        coordinator.sensor_definitions = make_defs()
+        coordinator.client = FakeClient()
+        coordinator.enable_wtc_research_polling = False
+        self.assertEqual(await coordinator._async_poll_one_wtc_research_register(), {})
+        self.assertEqual(coordinator.client.calls, [])
+
     async def test_interval_and_round_robin(self):
         clock = [0.0]
         cls = extracted_method_class(clock)
         coordinator = cls()
         coordinator.sensor_definitions = make_defs()
         coordinator.client = FakeClient()
+        coordinator.enable_wtc_research_polling = True
         first = await coordinator._async_poll_one_wtc_research_register()
         self.assertEqual(list(first), ["one"])
         clock[0] = 179.0
@@ -74,6 +84,7 @@ class SlowPollingBehaviorTests(unittest.IsolatedAsyncioTestCase):
         coordinator = cls()
         coordinator.sensor_definitions = make_defs()
         coordinator.client = FakeClient()
+        coordinator.enable_wtc_research_polling = True
         coordinator.client.fail = True
         self.assertEqual(await coordinator._async_poll_one_wtc_research_register(), {})
         self.assertTrue(coordinator._wtc_research_poll_paused)
