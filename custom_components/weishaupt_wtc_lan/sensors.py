@@ -224,6 +224,98 @@ IP_MODE_MAP = {
 # ============================================================================
 
 SG_SENSORS: list[WeishauptSensorDefinition] = [
+    # Read-only HK1 setting, restored from upstream PRs #9/#10/#11
+    WeishauptSensorDefinition(
+        key="sg_heizkurvensteilheit_hk1",
+        name="Heizkurvensteilheit HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x254B,
+        os=0x02,
+        vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        scale=0.1,
+        signed=False,
+        icon="mdi:chart-bell-curve",
+        entity_registry_enabled_default=True,
+    ),
+    # Read-only HK1 setting, restored from upstream PRs #9/#10/#11
+    WeishauptSensorDefinition(
+        key="sg_heizkurve_parallelverschiebung_hk1",
+        name="Heizkurve Parallelverschiebung HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x25AD,
+        os=0x02,
+        vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit="K",
+        scale=0.1,
+        signed=True,
+        icon="mdi:chart-bell-curve",
+        entity_registry_enabled_default=True,
+    ),
+    # Read-only HK1 setting, restored from upstream PRs #9/#10/#11
+    WeishauptSensorDefinition(
+        key="sg_vorlaufsolltemperatur_heizgrenze_hk1",
+        name="Vorlaufsolltemperatur Heizgrenze HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x25C7,
+        os=0x02,
+        vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit="°C",
+        scale=0.1,
+        icon="mdi:thermometer",
+    ),
+    # Read-only HK1 setting, restored from upstream PRs #9/#10/#11
+    WeishauptSensorDefinition(
+        key="sg_frostschutz_aussentemperatur_hk1",
+        name="Frostschutz Außentemperatur HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x2554,
+        os=0x02,
+        vs=2,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        unit="°C",
+        scale=0.1,
+        signed=True,
+        icon="mdi:snowflake-thermometer",
+    ),
+    # Read-only HK1 setting, restored from upstream PRs #9/#10/#11
+    WeishauptSensorDefinition(
+        key="sg_aufheizoptimierung_hk1",
+        name="Aufheizoptimierung HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x25A3,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        value_map={0: "Aus"},
+        icon="mdi:clock-fast",
+    ),
+    # Read-only HK1 setting, restored from upstream PRs #9/#10/#11
+    WeishauptSensorDefinition(
+        key="sg_gebaeudebauweise_hk1",
+        name="Gebäudebauweise HK1",
+        mi=0x02,
+        mx=0x00,
+        ox=0x256E,
+        os=0x02,
+        vs=1,
+        group=WeishauptDeviceGroup.SG,
+        modbus_reg="",
+        value_map={2: "leicht"},
+        icon="mdi:home-thermometer",
+    ),
     # --- Heating circuit 1 settings (via SG) ---
     # HK1 outdoor temperature level raise (read-only)
     # Raw -200 = -20.0 °C, observed as "Aus" on controller.
