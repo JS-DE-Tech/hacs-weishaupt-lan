@@ -565,8 +565,8 @@ The following registers were confirmed through real read-only API responses on t
 | Outdoor temperature | `0x01` | `0x00` | `0x26B1` | `0x02` | `2` | × 0.1 °C |
 | Plate heat exchanger temperature | `0x01` | `0x00` | `0x261F` | `0x02` | `2` | × 0.1 °C |
 | Boiler temperature | `0x07` | `0x00` | `0x2532` | `0x00` | `2` | × 0.1 °C |
-| Flue-gas temperature | `0x07` | `0x00` | `0x2533` | `0x02` | `2` | × 0.1 °C |
-| Return temperature | `0x07` | `0x00` | `0x2537` | `0x00` | `2` | × 0.1 °C |
+| Flue-gas temperature | `0x07` | `0x00` | `0x2537` | `0x00` | `2` | × 0.1 °C |
+| Return temperature | `0x07` | `0x00` | `0x2533` | `0x02` | `2` | × 0.1 °C |
 | Flow target temperature | `0x07` | `0x00` | `0x2545` | `0x00` | `2` | × 0.1 °C |
 | VPT volume flow | `0x09` | `0x01` | `0x2613` | `0x02` | `2` | l/h |
 | System pressure | `0x09` | `0x01` | `0x2614` | `0x02` | `2` | × 0.01 bar |
