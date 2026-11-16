@@ -265,8 +265,8 @@ A permanent domestic-hot-water enable/disable register has not yet been confirme
 | `wtc_brennerphase` | Burner operating phase | `0x07` | `0x00` | `0x2541` | `0x00` | `1` | enum | Confirmed |
 | `wtc_vorlaufsolltemperatur` | Flow target temperature | `0x07` | `0x00` | `0x2545` | `0x00` | `2` | × `0.1 °C` | Confirmed |
 | `wtc_kesseltemperatur` | Boiler temperature | `0x07` | `0x00` | `0x2532` | `0x00` | `2` | × `0.1 °C` | Confirmed |
-| `wtc_abgastemperatur` | Flue-gas temperature | `0x07` | `0x00` | `0x2533` | `0x02` | `2` | × `0.1 °C` | Empirically confirmed |
-| `wtc_ruecklauftemperatur` | Return temperature | `0x07` | `0x00` | `0x2537` | `0x00` | `2` | × `0.1 °C` | Empirically confirmed |
+| `wtc_abgastemperatur` | Flue-gas temperature | `0x07` | `0x00` | `0x2537` | `0x00` | `2` | × `0.1 °C` | Empirically confirmed |
+| `wtc_ruecklauftemperatur` | Return temperature | `0x07` | `0x00` | `0x2533` | `0x02` | `2` | × `0.1 °C` | Empirically confirmed |
 | `wtc_volumenstrom_vpt` | VPT volume flow | `0x09` | `0x01` | `0x2613` | `0x02` | `2` | `l/h` | Confirmed |
 | `wtc_anlagendruck` | System pressure | `0x09` | `0x01` | `0x2614` | `0x02` | `2` | × `0.01 bar` | Confirmed |
 | `wtc_waermeleistung_vpt` | VPT thermal output | `0x09` | `0x01` | `0x2631` | `0x02` | device-dependent response size | × `0.01 kW` | Confirmed |
@@ -294,8 +294,8 @@ maintenance.
 | System pressure | `01090126140200020000` | `02090126140200020095` | `1.49 bar` |
 | Boiler temperature | `01070025320000020000` | `02070025320000020192` | `40.2 °C` |
 | VPT volume flow | `01090126130200020000` | `02090126130200020000` | `0 l/h` |
-| Flue-gas temperature | `01070025330200020000` | `0207002533020002018f` | `39.9 °C` |
-| Return temperature | `01070025370000020000` | `0207002537000002019d` | `41.3 °C` |
+| Return temperature | `01070025330200020000` | `0207002533020002018f` | `39.9 °C` |
+| Flue-gas temperature | `01070025370000020000` | `0207002537000002019d` | `41.3 °C` |
 | Flow target temperature | `01070025450000020000` | `02070025450000020050` | `8.0 °C` |
 
 ## Mirrored Counter Registers
