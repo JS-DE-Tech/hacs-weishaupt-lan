@@ -19,7 +19,7 @@ from .api import (
     WeishauptConnectionError,
 )
 from .const import CMD_RESPONSE
-from .const import DOMAIN
+from .const import DOMAIN, DEFAULT_SCAN_INTERVAL, MIN_SCAN_INTERVAL, MAX_SCAN_INTERVAL
 from .heating_circuits import build_polled_sensor_definitions
 from .sensors import ExperimentalWtcRegister, WeishauptSensorDefinition
 
@@ -86,6 +86,11 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         network_refresh_callback: Callable[[], Awaitable[dict[str, Any]]] | None = None,
     ) -> None:
         """Initialize the coordinator."""
+        try:
+            scan_interval = int(scan_interval)
+        except (TypeError, ValueError):
+            scan_interval = DEFAULT_SCAN_INTERVAL
+        scan_interval = max(MIN_SCAN_INTERVAL, min(MAX_SCAN_INTERVAL, scan_interval))
         super().__init__(
             hass,
             _LOGGER,
@@ -111,6 +116,7 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             datetime.now(timezone.utc) if network_refresh_callback is not None else None
         )
         self._last_good_dynamic_data: dict[str, Any] = {}
+        self._stopped = False
         self._write_lock = asyncio.Lock()
         self._write_queue: OrderedDict[
             tuple[int, int, int, int, int], _QueuedWrite
@@ -119,6 +125,24 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._write_drain_active = False
         self._write_debounce_task: asyncio.Task | None = None
         self._post_write_refresh_task: asyncio.Task | None = None
+        self._post_write_settling = False
+
+    async def async_stop_pending_operations(self) -> None:
+        """Stop queued writes and delayed refreshes before an entry is discarded."""
+        async with self._write_lock:
+            self._stopped = True
+            self._write_queue.clear()
+            self._post_write_settling = False
+            tasks = [task for task in (self._write_debounce_task, self._post_write_refresh_task)
+                     if task is not None and not task.done()]
+            for task in tasks:
+                task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        async with self._write_lock:
+            self._write_debounce_task = None
+            self._post_write_refresh_task = None
+            self._write_drain_active = False
 
     async def async_enqueue_write(
         self,
@@ -136,13 +160,15 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             value_int=value_int,
         )
         async with self._write_lock:
+            if self._stopped:
+                raise WeishauptApiError("Integration has been unloaded")
             self._write_queue[queued.address] = queued
             self._cancel_post_write_refresh_locked()
             self._schedule_write_debounce_locked()
 
     def _schedule_write_debounce_locked(self) -> None:
         """Schedule or reset the short write debounce task."""
-        if self._write_drain_active:
+        if self._stopped or self._write_drain_active:
             return
         if self._write_debounce_task is not None and not self._write_debounce_task.done():
             self._write_debounce_task.cancel()
@@ -158,6 +184,7 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         ):
             self._post_write_refresh_task.cancel()
         self._post_write_refresh_task = None
+        self._post_write_settling = False
 
     async def _async_flush_write_queue_after_debounce(self) -> None:
         """Wait for coalescing, then drain queued writes one at a time."""
@@ -173,7 +200,7 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Send queued writes serially and schedule one delayed refresh."""
         while True:
             async with self._write_lock:
-                if not self._write_queue:
+                if self._stopped or not self._write_queue:
                     self._write_debounce_task = None
                     self._write_drain_active = False
                     self._schedule_post_write_refresh_locked()
@@ -221,11 +248,14 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _schedule_post_write_refresh_locked(self) -> None:
         """Schedule exactly one quiet-period refresh after the last write."""
+        if self._stopped:
+            return
         if (
             self._post_write_refresh_task is not None
             and not self._post_write_refresh_task.done()
         ):
             self._post_write_refresh_task.cancel()
+        self._post_write_settling = True
         self._post_write_refresh_task = asyncio.create_task(
             self._async_request_refresh_after_write_settle()
         )
@@ -234,16 +264,14 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Request one coordinator refresh after the post-write quiet period."""
         try:
             await asyncio.sleep(POST_WRITE_SETTLE_SECONDS)
-        except asyncio.CancelledError:
-            raise
-
-        async with self._write_lock:
-            if asyncio.current_task() is self._post_write_refresh_task:
-                self._post_write_refresh_task = None
-
-        refresh = getattr(self, "async_request_refresh", None)
-        if refresh is not None:
-            await refresh()
+            self._post_write_settling = False
+            if not self._stopped:
+                await self.async_request_refresh()
+        finally:
+            async with self._write_lock:
+                if asyncio.current_task() is self._post_write_refresh_task:
+                    self._post_write_refresh_task = None
+                    self._post_write_settling = False
 
     def _apply_acknowledged_target_value(self, queued: _QueuedWrite) -> None:
         """Update coordinator data optimistically after a strictly validated ACK."""
@@ -281,10 +309,7 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     self._write_debounce_task is not None
                     and not self._write_debounce_task.done()
                 )
-                or (
-                    self._post_write_refresh_task is not None
-                    and not self._post_write_refresh_task.done()
-                )
+                or self._post_write_settling
             )
 
     def _cached_data(self) -> dict[str, Any]:
@@ -300,7 +325,7 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         now: datetime | None = None,
     ) -> bool:
         """Refresh cached network diagnostics when due."""
-        if self.network_refresh_callback is None:
+        if self._stopped or self.network_refresh_callback is None:
             return False
         now = now or datetime.now(timezone.utc)
         if (
@@ -330,6 +355,8 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from the Weishaupt device."""
+        if self._stopped:
+            return self._cached_data()
         if await self._writes_pending_or_settling():
             _LOGGER.debug(
                 "Skipping coordinator poll while writes are pending or settling"

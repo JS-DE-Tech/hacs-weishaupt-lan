@@ -481,6 +481,28 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(entity.native_value, raw)
                     self.assertEqual(entity._attr_native_unit_of_measurement, "%")
 
+    def test_hk_pumps_are_normal_readonly_on_their_circuit_devices(self) -> None:
+        """Controller pump states belong to HK2/HK3 without an experimental option."""
+        for opted_in in (False, True):
+            definitions = heating_circuits.build_sensor_definitions(
+                [2, 3], {"system"}, include_experimental_hk_candidates=opted_in,
+            )
+            for key, mx, suffix in (("hk_pumpe_heizkreis", 1, "hk"), ("hk3_pumpe_heizkreis", 2, "hk3")):
+                definition = next(d for d in definitions if d.key == key)
+                self.assertEqual((definition.mi, definition.mx, definition.ox, definition.os, definition.vs), (2, mx, 0x2546, 2, 1))
+                self.assertIsNone(definition.entity_category)
+                self.assertNotIn("EXP", definition.name)
+                self.assertTrue(definition.entity_registry_enabled_default)
+                self.assertFalse(heating_circuits.is_writable_operating_mode_definition(definition))
+                for raw, expected in ((0, "Aus"), (1, "Ein")):
+                    entity = sensor.WeishauptSensorEntity(
+                        SimpleNamespace(data={key: {"value_int": raw, "value_hex": f"{raw:02x}"}}, system_device_id="root"),
+                        definition, SimpleNamespace(entry_id="test", data={}),
+                    )
+                    self.assertTrue(entity.available)
+                    self.assertEqual(entity.native_value, expected)
+                    self.assertEqual(entity.device_info["identifiers"], {("weishaupt_wtc_lan", f"test_{suffix}")})
+
     def test_hk_candidates_follow_detected_circuits(self) -> None:
         """No HK1 diagnostics or confirmed HK2 mixers on an HK3-only installation."""
         definitions = heating_circuits.build_sensor_definitions(
@@ -917,10 +939,8 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
             "sg_hk1_candidate_mischerstellung_soll",
             "sg_hk1_candidate_mischerstellung_ist",
             "sg_hk1_candidate_pumpe_heizkreis",
-            "hk_candidate_pumpe_heizkreis",
             "hk3_candidate_mischerstellung_soll",
             "hk3_candidate_mischerstellung_ist",
-            "hk3_candidate_pumpe_heizkreis",
         }
 
         self.assertFalse(candidate_keys & disabled_keys)
@@ -937,11 +957,11 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(
             (
-                enabled_by_key["hk3_candidate_pumpe_heizkreis"].mi,
-                enabled_by_key["hk3_candidate_pumpe_heizkreis"].mx,
-                enabled_by_key["hk3_candidate_pumpe_heizkreis"].ox,
-                enabled_by_key["hk3_candidate_pumpe_heizkreis"].os,
-                enabled_by_key["hk3_candidate_pumpe_heizkreis"].vs,
+                enabled_by_key["hk3_pumpe_heizkreis"].mi,
+                enabled_by_key["hk3_pumpe_heizkreis"].mx,
+                enabled_by_key["hk3_pumpe_heizkreis"].ox,
+                enabled_by_key["hk3_pumpe_heizkreis"].os,
+                enabled_by_key["hk3_pumpe_heizkreis"].vs,
             ),
             (0x02, 0x02, 0x2546, 0x02, 1),
         )

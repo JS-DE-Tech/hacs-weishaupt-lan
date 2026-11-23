@@ -15,11 +15,11 @@ A display photo showed target 53%, actual 52% and a 36.6 C flow temperature. GET
 
 Only detected HK2 receives these normal read-only sensors. A mixer is not inferred for HK1 or HK3. No new writable mixer control is introduced.
 
-### Heating-circuit candidates
+### Heating-circuit pump readings and remaining candidates
 
-The heating-circuit option adds diagnostic pump candidates at `02/00/2546/02`, `02/01/2546/02`, and `02/02/2546/02` (VS=1) for detected HK1/HK2/HK3. Raw 1 agrees with displayed ON. Raw 0 uses the existing pump mapping but has not yet been observed in a matching physical OFF comparison. The controller state is not proof of physical rotation or an electrical supply measurement.
+Normal read-only `hk_pumpe_heizkreis` and `hk3_pumpe_heizkreis` sensors use `02/01/2546/02` and `02/02/2546/02` (VS=1), directly on the existing HK2/HK3 devices without an EXP label. The optional diagnostic HK1 pump remains at `02/00/2546/02`. Raw 1 agrees with displayed ON for HK2/HK3. Raw 0 uses the existing pump mapping but has not yet been observed in a matching physical OFF comparison. The controller state is not proof of physical rotation or an electrical supply measurement.
 
-HK1/HK3 mixer candidates remain optional and unconfirmed. The EXP display-name prefix and diagnostic categories distinguish these from normal sensors. HK2 mixer registers are not polled twice when candidates are enabled.
+HK1/HK3 mixer candidates remain optional and unconfirmed. The EXP display-name prefix and diagnostic categories distinguish these from normal sensors. HK2 mixer and HK2/HK3 pump registers are not polled twice when candidates are enabled.
 
 ### Extended WTC combustion candidates
 
@@ -50,10 +50,10 @@ The internal pump modulation candidate `09/01/2619/02 VS=1` returns 100, matchin
 
 ## Validation boundaries and release checks
 
-New regression tests cover field response decoding, error isolation with shuffled frames, zero values, unsigned ionisation, read-only setup, HK2-only mixer exposure and duplicate polling prevention. Existing tests cover six-frame limits, throttling, write settling and 0.4.7 registry behavior. Local tests use Home Assistant stubs and do not substitute for a live installation test.
+New regression tests cover field response decoding, error isolation with shuffled frames, zero values, unsigned ionisation, read-only setup, HK2-only mixer exposure and duplicate polling prevention. Existing tests cover six-frame limits, throttling, write settling and 0.4.7 registry behavior. Additional tests cover successful/failed unload, cancellation during a write or settle delay, stale-entity writes and persisted intervals. All 77 tests passed. A direct comparison against 0.4.7 confirmed that all 85 existing regular sensor definitions and 19 existing experimental register definitions are unchanged; device/entity preservation tests also pass. Local tests use Home Assistant stubs and do not substitute for a live installation test.
 
 Original photographs and local time-series exports are not part of the public release. Local evidence is stored in ignored `local-diagnostics/`. No credentials or private network configuration are included in this document.
 
 ## Pull request review
 
-PRs [#1](https://github.com/JS-DE-Tech/hacs-weishaupt-lan/pull/1) through [#8](https://github.com/JS-DE-Tech/hacs-weishaupt-lan/pull/8) were already merged when reviewed. Multi-circuit support, device grouping, raw-response matching, diagnostics and throttling are retained; no duplicate cherry-picks are necessary.
+PRs [#1](https://github.com/JS-DE-Tech/hacs-weishaupt-lan/pull/1) through [#8](https://github.com/JS-DE-Tech/hacs-weishaupt-lan/pull/8) were already merged when reviewed. Multi-circuit support, device grouping, raw-response matching, diagnostics and throttling are retained; no duplicate cherry-picks are necessary. Two outstanding PR #7 review findings are fixed in 0.5.0: pending write/refresh tasks are cancelled on successful entry unload, and old persisted polling intervals are clamped to the supported 30-600 second range.

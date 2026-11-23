@@ -12,6 +12,7 @@ import sys
 import tempfile
 import types
 import unittest
+from unittest.mock import AsyncMock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -369,6 +370,94 @@ class IntegrationHelperTests(unittest.IsolatedAsyncioTestCase):
         """Restore production write timings."""
         coordinator_module.WRITE_DEBOUNCE_SECONDS = self._original_write_debounce
         coordinator_module.POST_WRITE_SETTLE_SECONDS = self._original_post_write_settle
+
+    def test_persisted_scan_interval_is_clamped_in_actual_coordinator(self) -> None:
+        for stored, expected in ((10, 30), (0, 30), (30, 30), (120, 120), (900, 600), ("60", 60), (None, 30), ("invalid", 30)):
+            coordinator = integration.WeishauptDataUpdateCoordinator(
+                hass=object(), client=WriteQueueClient(), scan_interval=stored,
+            )
+            self.assertEqual(coordinator.update_interval, timedelta(seconds=expected))
+
+    async def test_unload_discards_queued_writes_and_rejects_stale_entity(self) -> None:
+        client = WriteQueueClient()
+        definition = sensor_definition_by_key("sg_systembetriebsart")
+        coordinator = integration.WeishauptDataUpdateCoordinator(hass=object(), client=client)
+        hass = SimpleNamespace(
+            data={integration.DOMAIN: {"entry": coordinator}},
+            config_entries=SimpleNamespace(async_unload_platforms=AsyncMock(return_value=True)),
+        )
+        await coordinator.async_enqueue_write(definition, 3)
+        self.assertTrue(await integration.async_unload_entry(hass, SimpleNamespace(entry_id="entry")))
+        await asyncio.sleep(0.05)
+        self.assertEqual(client.writes, [])
+        self.assertEqual(coordinator.refresh_calls, 0)
+        self.assertNotIn("entry", hass.data[integration.DOMAIN])
+        with self.assertRaises(coordinator_module.WeishauptApiError):
+            await coordinator.async_enqueue_write(definition, 1)
+        await coordinator.async_stop_pending_operations()  # idempotent
+
+    async def test_failed_unload_keeps_coordinator_operational(self) -> None:
+        client = WriteQueueClient()
+        definition = sensor_definition_by_key("sg_systembetriebsart")
+        coordinator = integration.WeishauptDataUpdateCoordinator(hass=object(), client=client)
+        hass = SimpleNamespace(
+            data={integration.DOMAIN: {"entry": coordinator}},
+            config_entries=SimpleNamespace(async_unload_platforms=AsyncMock(return_value=False)),
+        )
+        self.assertFalse(await integration.async_unload_entry(hass, SimpleNamespace(entry_id="entry")))
+        await coordinator.async_enqueue_write(definition, 3)
+        await asyncio.sleep(0.05)
+        self.assertEqual(len(client.writes), 1)
+        self.assertIs(hass.data[integration.DOMAIN]["entry"], coordinator)
+        await coordinator.async_stop_pending_operations()
+
+    async def test_stop_cancels_inflight_write_and_does_not_send_next(self) -> None:
+        client = WriteQueueClient()
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+        async def blocked_write(**kwargs):
+            client.writes.append(kwargs)
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                cancelled.set()
+        client.write_parameter = blocked_write
+        coordinator = integration.WeishauptDataUpdateCoordinator(hass=object(), client=client)
+        await coordinator.async_enqueue_write(sensor_definition_by_key("sg_systembetriebsart"), 3)
+        await coordinator.async_enqueue_write(sensor_definition_by_key("sg_betriebsart_hk1_vorgabe"), 2)
+        await asyncio.wait_for(started.wait(), 1)
+        await coordinator.async_stop_pending_operations()
+        self.assertTrue(cancelled.is_set())
+        self.assertEqual(len(client.writes), 1)
+        self.assertEqual(coordinator._writes_in_flight, 0)
+        self.assertEqual(coordinator.refresh_calls, 0)
+        self.assertIsNone(coordinator._post_write_refresh_task)
+
+    async def test_stop_cancels_delayed_refresh(self) -> None:
+        client = WriteQueueClient()
+        coordinator_module.POST_WRITE_SETTLE_SECONDS = 0.1
+        coordinator = integration.WeishauptDataUpdateCoordinator(hass=object(), client=client)
+        await coordinator.async_enqueue_write(sensor_definition_by_key("sg_systembetriebsart"), 3)
+        await asyncio.sleep(0.03)
+        self.assertEqual(len(client.writes), 1)
+        await coordinator.async_stop_pending_operations()
+        await asyncio.sleep(0.12)
+        self.assertEqual(coordinator.refresh_calls, 0)
+
+    async def test_settled_refresh_can_poll_from_separate_task(self) -> None:
+        client = WriteQueueClient()
+        definition = sensor_definition_by_key("sg_systembetriebsart")
+        coordinator = integration.WeishauptDataUpdateCoordinator(hass=object(), client=client, sensor_definitions=[definition])
+        refreshed = asyncio.Event()
+        async def refresh():
+            await asyncio.create_task(coordinator._async_update_data())
+            refreshed.set()
+        coordinator.async_request_refresh = refresh
+        await coordinator.async_enqueue_write(definition, 3)
+        await asyncio.wait_for(refreshed.wait(), 1)
+        self.assertTrue(client.params)
+        await coordinator.async_stop_pending_operations()
 
     async def test_quick_repeated_writes_to_same_register_are_coalesced(self) -> None:
         """Only the newest pending value for the same register should be sent."""

@@ -709,7 +709,7 @@ The bundled discovery tools:
 
 Detected HK2 now exposes **Mischerstellung Soll** and **Mischerstellung Ist** as normal read-only percentage sensors. Controller-reported positions were compared with the physical display. HK1/HK3 mixers are not inferred.
 
-The optional heating-circuit candidate setting exposes diagnostic pump states and unconfirmed HK1/HK3 mixer positions. Their ON state has been observed; physical OFF correlation remains open. To inspect the eight new combustion candidates, enable both experimental WTC options. They appear on **WTC Experimental Diagnostics**, retain raw-value metadata and use an **EXP** display-name prefix and explicitly remain candidates. Existing unique IDs remain unchanged. These options are off by default and add no writable heating controls.
+HK2/HK3 pump status sensors are added directly to their existing circuit devices without an EXP prefix or opt-in. They show controller-reported state, not an electrical or rotation measurement. ON has been observed; the existing OFF mapping still lacks a matching physical OFF capture. The optional heating-circuit candidate setting exposes the HK1 pump and unconfirmed HK1/HK3 mixer positions as diagnostics. To inspect the eight new combustion candidates, enable both experimental WTC options. They appear on **WTC Experimental Diagnostics**, retain raw-value metadata and use an **EXP** display-name prefix and explicitly remain candidates. Existing unique IDs remain unchanged. These options are off by default and add no writable heating controls.
 
 See [field-validation evidence and limitations](docs/field-validation-0.5.0.md) for addresses, scaling, unsupported readings and the remaining checks. The 0.4.7 device-registry fixes and existing identifiers are retained.
 

@@ -1496,6 +1496,20 @@ HK2_MIXER_SENSORS: list[WeishauptSensorDefinition] = [
 ]
 
 
+# Controller-reported pump status correlated with HK2/HK3 display observations.
+HK_PUMP_SENSORS: list[WeishauptSensorDefinition] = [
+    replace(
+        definition,
+        key=definition.key.replace("_candidate_", "_", 1),
+        name=definition.name.replace("EXP ", "", 1),
+        modbus_reg="validated " + definition.modbus_reg.removeprefix("candidate "),
+        entity_category=None,
+    )
+    for definition in HK_CANDIDATE_SENSORS
+    if definition.ox == 0x2546
+]
+
+
 EXPERIMENTAL_WTC_HINT = "Unconfirmed dynamic WTC value"
 
 
@@ -2064,7 +2078,7 @@ SOL_SENSORS: list[WeishauptSensorDefinition] = [
 # ============================================================================
 
 ALL_SENSORS: list[WeishauptSensorDefinition] = (
-    SG_SENSORS + WTC_SENSORS + HK_SENSORS + HK2_MIXER_SENSORS + SOL_SENSORS
+    SG_SENSORS + WTC_SENSORS + HK_SENSORS + HK2_MIXER_SENSORS + HK_PUMP_SENSORS + SOL_SENSORS
 )
 
 POLLED_SENSORS: list[WeishauptSensorDefinition] = [

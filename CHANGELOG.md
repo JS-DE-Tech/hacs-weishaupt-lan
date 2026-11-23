@@ -4,19 +4,22 @@
 
 ### Added
 - Added normal read-only HK2 mixer target and actual position sensors, correlated with the local device display.
-- Added opt-in diagnostic heating-circuit pump and unconfirmed HK1/HK3 mixer candidates. Pump ON has been observed; OFF remains to be field-validated.
+- Added regular read-only HK2/HK3 pump status sensors on their existing heating-circuit devices. Pump ON has been observed; the existing OFF mapping remains to be field-validated.
+- Added opt-in HK1 pump and unconfirmed HK1/HK3 mixer diagnostics. New experimental display names use the EXP prefix.
 - Added eight named combustion candidates to extended experimental WTC diagnostics: fan speed/control, gas-valve control, gas/air ratio, and four ionisation signals.
 - Added the internal pump modulation candidate and documented its remaining validation limits.
 - Added field-validation evidence and manual menu mapping; raw zero remains a valid reading.
 
 ### Fixed
+- Cancel pending writes and delayed refreshes when an entry unloads; reject writes from stale entities. Addresses the outstanding review in PR #7.
+- Clamp persisted polling intervals to 30-600 seconds when creating the coordinator, including older stored configurations (PR #7 review).
 - Keep unsigned combustion candidates unsigned rather than interpreting their high bit as a negative value.
 - Avoid duplicate HK2 mixer candidates and avoid adding HK1 candidates when HK1 is absent.
 
 ### Notes
 - Combustion candidates are disabled by default and remain read-only diagnostics until simultaneous display comparison confirms meaning and scaling.
 - Gas-valve offset and time-to-flame returned CMD_ERROR in the latest probe and are not exposed as new sensors.
-- Existing 0.4.7 device-registry migration, identifiers, controls and request throttling are retained.
+- Existing 0.4.7 device-registry migration, identifiers, controls and request throttling are retained. All 85 existing regular and 19 experimental register definitions compare unchanged against 0.4.7.
 - Local tests use Home Assistant stubs; the live installation has not been upgraded to 0.5.0.
 
 ## 0.4.7 - 2026-10-01

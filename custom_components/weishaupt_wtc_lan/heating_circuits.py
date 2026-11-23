@@ -11,6 +11,7 @@ from .const import NETWORK_DEVICE_SUFFIX
 from .sensors import (
     HK1_CANDIDATE_SENSORS,
     HK2_MIXER_SENSORS,
+    HK_PUMP_SENSORS,
     HK_CANDIDATE_SENSORS,
     HK_SENSORS,
     NETWORK_SENSORS,
@@ -545,11 +546,11 @@ def build_hk_sensor_definitions(
     include_experimental_candidates: bool = False,
 ) -> list[WeishauptSensorDefinition]:
     """Build sensor definitions for an external heating circuit."""
-    base_definitions = list(HK_SENSORS)
+    base_definitions = list(HK_SENSORS) + list(HK_PUMP_SENSORS)
     if include_experimental_candidates:
         base_definitions.extend(
             definition for definition in HK_CANDIDATE_SENSORS
-            if circuit_number != 2 or definition.ox == 0x2546
+            if circuit_number == 3 and definition.ox != 0x2546
         )
 
     if circuit_number == 2:
@@ -566,7 +567,7 @@ def build_hk_sensor_definitions(
             mx=mx,
             modbus_reg=(
                 sensor_def.modbus_reg.replace("/01/", "/02/")
-                if sensor_def.modbus_reg.startswith("candidate ")
+                if sensor_def.modbus_reg.startswith(("candidate ", "validated "))
                 else _offset_modbus_register(sensor_def.modbus_reg, HK3_MODBUS_OFFSET)
             ),
         )
