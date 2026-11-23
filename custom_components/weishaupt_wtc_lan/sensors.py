@@ -1390,7 +1390,7 @@ NETWORK_MAC_COMPONENT_SENSORS: list[WeishauptSensorDefinition] = [
 HK1_CANDIDATE_SENSORS: list[WeishauptSensorDefinition] = [
     WeishauptSensorDefinition(
         key="sg_hk1_candidate_mischerstellung_soll",
-        name="Kandidat Mischerstellung Soll",
+        name="EXP Mischerstellung Soll",
         mi=0x02,
         mx=0x00,
         ox=0x2536,
@@ -1404,7 +1404,7 @@ HK1_CANDIDATE_SENSORS: list[WeishauptSensorDefinition] = [
     ),
     WeishauptSensorDefinition(
         key="sg_hk1_candidate_mischerstellung_ist",
-        name="Kandidat Mischerstellung Ist",
+        name="EXP Mischerstellung Ist",
         mi=0x02,
         mx=0x00,
         ox=0x254F,
@@ -1418,7 +1418,7 @@ HK1_CANDIDATE_SENSORS: list[WeishauptSensorDefinition] = [
     ),
     WeishauptSensorDefinition(
         key="sg_hk1_candidate_pumpe_heizkreis",
-        name="Kandidat Pumpe Heizkreis",
+        name="EXP Pumpe Heizkreis",
         mi=0x02,
         mx=0x00,
         ox=0x2546,
@@ -1435,7 +1435,7 @@ HK1_CANDIDATE_SENSORS: list[WeishauptSensorDefinition] = [
 HK_CANDIDATE_SENSORS: list[WeishauptSensorDefinition] = [
     WeishauptSensorDefinition(
         key="hk_candidate_mischerstellung_soll",
-        name="HK Kandidat Mischerstellung Soll",
+        name="HK EXP Mischerstellung Soll",
         mi=0x02,
         mx=0x01,
         ox=0x2536,
@@ -1449,7 +1449,7 @@ HK_CANDIDATE_SENSORS: list[WeishauptSensorDefinition] = [
     ),
     WeishauptSensorDefinition(
         key="hk_candidate_mischerstellung_ist",
-        name="HK Kandidat Mischerstellung Ist",
+        name="HK EXP Mischerstellung Ist",
         mi=0x02,
         mx=0x01,
         ox=0x254F,
@@ -1463,7 +1463,7 @@ HK_CANDIDATE_SENSORS: list[WeishauptSensorDefinition] = [
     ),
     WeishauptSensorDefinition(
         key="hk_candidate_pumpe_heizkreis",
-        name="HK Kandidat Pumpe Heizkreis",
+        name="HK EXP Pumpe Heizkreis",
         mi=0x02,
         mx=0x01,
         ox=0x2546,
@@ -1487,7 +1487,7 @@ HK2_MIXER_SENSORS: list[WeishauptSensorDefinition] = [
     replace(
         definition,
         key=definition.key.replace("_candidate_", "_", 1),
-        name=definition.name.replace("Kandidat ", "", 1),
+        name=definition.name.replace("EXP ", "", 1),
         modbus_reg="validated " + definition.modbus_reg.removeprefix("candidate "),
         entity_category=None,
     )
@@ -1615,7 +1615,7 @@ EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
         0x02,
         1,
         key="wtc_candidate_pumpe_intern_sollleistung",
-        display_name="Kandidat Pumpenleistung Pumpe intern Sollleistung",
+        display_name="EXP Pumpenleistung Pumpe intern Sollleistung",
         hint=(
             "Experimental candidate from manual-reference mapping / WEM research. "
             "Meaning and scaling require real-hardware validation. Read-only."
@@ -1633,7 +1633,7 @@ EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
     _experimental_wtc_register(
         0x07, 0x00, 0x2540, 0x00, 2,
         key="wtc_candidate_geblaesedrehzahl",
-        display_name="Kandidat Gebläsedrehzahl",
+        display_name="EXP Gebläsedrehzahl",
         hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
         confidence="experimental",
         probable_unit='rpm',
@@ -1648,7 +1648,7 @@ EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
     _experimental_wtc_register(
         0x07, 0x00, 0x257E, 0x00, 2,
         key="wtc_candidate_geblaese_ansteuersignal",
-        display_name="Kandidat Gebläse-Ansteuersignal",
+        display_name="EXP Gebläse-Ansteuersignal",
         hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
         confidence="experimental",
         probable_unit='%',
@@ -1663,7 +1663,7 @@ EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
     _experimental_wtc_register(
         0x07, 0x00, 0x253F, 0x00, 2,
         key="wtc_candidate_gasventil_ansteuersignal",
-        display_name="Kandidat Gasventil-Ansteuersignal",
+        display_name="EXP Gasventil-Ansteuersignal",
         hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
         confidence="experimental",
         probable_unit='%',
@@ -1678,7 +1678,7 @@ EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
     _experimental_wtc_register(
         0x07, 0x00, 0x257D, 0x00, 2,
         key="wtc_candidate_gas_luft_verhaeltnis",
-        display_name="Kandidat Gas-Luft-Verhältnis",
+        display_name="EXP Gas-Luft-Verhältnis",
         hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
         confidence="experimental",
         probable_unit='%',
@@ -1693,7 +1693,7 @@ EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
     _experimental_wtc_register(
         0x07, 0x00, 0x2579, 0x00, 1,
         key="wtc_candidate_ionisation_soll",
-        display_name="Kandidat Ionisationssignal Sollwert",
+        display_name="EXP Ionisationssignal Sollwert",
         hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
         confidence="experimental",
         probable_unit='Pkt.',
@@ -1708,7 +1708,7 @@ EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
     _experimental_wtc_register(
         0x07, 0x00, 0x257A, 0x00, 1,
         key="wtc_candidate_ionisation_start",
-        display_name="Kandidat Ionisationssignal Start",
+        display_name="EXP Ionisationssignal Start",
         hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
         confidence="experimental",
         probable_unit='Pkt.',
@@ -1723,7 +1723,7 @@ EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
     _experimental_wtc_register(
         0x07, 0x00, 0x2539, 0x00, 1,
         key="wtc_candidate_ionisation_scot_ist",
-        display_name="Kandidat Ionisationssignal SCOT-Istwert",
+        display_name="EXP Ionisationssignal SCOT-Istwert",
         hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
         confidence="experimental",
         probable_unit='Pkt.',
@@ -1738,7 +1738,7 @@ EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
     _experimental_wtc_register(
         0x07, 0x00, 0x253A, 0x00, 1,
         key="wtc_candidate_ionisation_scot_basis",
-        display_name="Kandidat Ionisationssignal SCOT-Basiswert",
+        display_name="EXP Ionisationssignal SCOT-Basiswert",
         hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
         confidence="experimental",
         probable_unit='Pkt.',

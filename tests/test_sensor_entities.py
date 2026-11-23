@@ -491,7 +491,7 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
         for definition in definitions:
             if "_candidate_" in definition.key:
                 self.assertEqual(definition.entity_category, "diagnostic")
-                self.assertIn("Kandidat", definition.name)
+                self.assertIn("EXP", definition.name)
 
     def test_combustion_field_samples_remain_experimental(self) -> None:
         """Decode captured payloads without silently promoting candidate semantics."""
@@ -559,7 +559,7 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             entity._attr_name,
-            "Kandidat Pumpenleistung Pumpe intern Sollleistung",
+            "EXP Pumpenleistung Pumpe intern Sollleistung",
         )
         self.assertEqual(entity._attr_native_unit_of_measurement, "%")
         self.assertEqual(entity.native_value, 57.0)

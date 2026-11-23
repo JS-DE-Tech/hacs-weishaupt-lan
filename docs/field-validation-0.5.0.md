@@ -19,11 +19,11 @@ Only detected HK2 receives these normal read-only sensors. A mixer is not inferr
 
 The heating-circuit option adds diagnostic pump candidates at `02/00/2546/02`, `02/01/2546/02`, and `02/02/2546/02` (VS=1) for detected HK1/HK2/HK3. Raw 1 agrees with displayed ON. Raw 0 uses the existing pump mapping but has not yet been observed in a matching physical OFF comparison. The controller state is not proof of physical rotation or an electrical supply measurement.
 
-HK1/HK3 mixer candidates remain optional and unconfirmed. Candidate names and diagnostic categories distinguish these from normal sensors. HK2 mixer registers are not polled twice when candidates are enabled.
+HK1/HK3 mixer candidates remain optional and unconfirmed. The EXP display-name prefix and diagnostic categories distinguish these from normal sensors. HK2 mixer registers are not polled twice when candidates are enabled.
 
 ### Extended WTC combustion candidates
 
-All entries below are optional, read-only, explicitly named candidates on the experimental diagnostic device. Both experimental WTC and extended experimental WTC options must be enabled. Setup probes only include supported registers; zero is a valid response.
+All entries below are optional, read-only, named with an EXP prefix on the experimental diagnostic device. Both experimental WTC and extended experimental WTC options must be enabled. Setup probes only include supported registers; zero is a valid response.
 
 | Key suffix (`wtc_candidate_`) | Address | VS | Candidate scale/unit | Observed raw -> interpreted |
 |---|---|---|---|---|

@@ -32,17 +32,17 @@ The authors and contributors accept no responsibility or liability for damage, m
 
 Tested and intended for:
 
-- Weishaupt SystemgerÃ¤t 2.5 / 2.6
+- Weishaupt Systemgerät 2.5 / 2.6
 - Article numbers: `48301122172`, `48301122242`, `48301122512`, `48301122522`
-- Heating systems controlled through the Weishaupt SystemgerÃ¤t, including WTC gas boilers and installations with additional heating-circuit modules
+- Heating systems controlled through the Weishaupt Systemgerät, including WTC gas boilers and installations with additional heating-circuit modules
 
 Other installations may work, but register availability depends on the installed modules and firmware.
 
 ## Prerequisites
 
-1. Connect the Weishaupt SystemgerÃ¤t to the local network using RJ-45.
-2. Enable the JSON interface in the SystemgerÃ¤t settings. **
-3. Determine the IP address or hostname of the SystemgerÃ¤t.
+1. Connect the Weishaupt Systemgerät to the local network using RJ-45.
+2. Enable the JSON interface in the Systemgerät settings. **
+3. Determine the IP address or hostname of the Systemgerät.
 4. Use the configured HTTP Basic Authentication credentials.
 
 Default values on many installations:
@@ -60,13 +60,13 @@ http://admin:Admin123@wem-sg/ajax/CanApiJson.json
 ```
 
 > [!IMPORTANT]
-> To use this integration, the WEM Portal connection must be disabled. The Weishaupt SystemgerÃ¤t does not allow simultaneous use of the WEM Portal cloud service and the local CanApiJson interface.
+> To use this integration, the WEM Portal connection must be disabled. The Weishaupt Systemgerät does not allow simultaneous use of the WEM Portal cloud service and the local CanApiJson interface.
 
 ### **Enable the JSON Interface
 
-The CanApiJson interface is disabled by default on many installations and must be enabled directly on the Weishaupt SystemgerÃ¤t.
+The CanApiJson interface is disabled by default on many installations and must be enabled directly on the Weishaupt Systemgerät.
 
-#### Step 1 â€” Open the service menu
+#### Step 1 — Open the service menu
 
 From the home screen, navigate to the service menu (wrench icon).
 
@@ -76,7 +76,7 @@ Select the installer/service level.
 
 <img src="https://raw.githubusercontent.com/JS-DE-Tech/hacs-weishaupt-lan/main/docs/images/enable_json_02.png" width="400">
 
-#### Step 2 â€” Log in as installer
+#### Step 2 — Log in as installer
 
 Enter the installer password.
 
@@ -86,7 +86,7 @@ After successful login, the installer menu will be displayed.
 
 <img src="https://raw.githubusercontent.com/JS-DE-Tech/hacs-weishaupt-lan/main/docs/images/enable_json_04.png" width="400">
 
-#### Step 3 â€” Open commissioning settings
+#### Step 3 — Open commissioning settings
 
 Select **Commissioning**.
 
@@ -96,7 +96,7 @@ Navigate to **Network**.
 
 <img src="https://raw.githubusercontent.com/JS-DE-Tech/hacs-weishaupt-lan/main/docs/images/enable_json_06.png" width="400">
 
-#### Step 4 â€” Enable the JSON interface
+#### Step 4 — Enable the JSON interface
 
 Open **JSON Interface**.
 
@@ -108,7 +108,7 @@ Set **JSON Interface** to **On**.
 
 The JSON interface is now enabled.
 
-#### Step 5 â€” Disable WEM Portal
+#### Step 5 — Disable WEM Portal
 
 Return to the user settings menu.
 
@@ -127,23 +127,23 @@ Disable the WEM Portal connection.
 > [!IMPORTANT]
 > The local CanApiJson interface used by this integration only works when the WEM Portal connection is disabled.
 >
-> If WEM Portal is enabled, the SystemgerÃ¤t reserves the communication channel for the cloud connection and Home Assistant will not be able to communicate with the controller.
+> If WEM Portal is enabled, the Systemgerät reserves the communication channel for the cloud connection and Home Assistant will not be able to communicate with the controller.
 >
 > You must choose either:
 >
 > - **WEM Portal (Cloud Access)**, or
 > - **Home Assistant via CanApiJson (Local Access)**
 >
-> Simultaneous operation is not supported by the SystemgerÃ¤t firmware.
+> Simultaneous operation is not supported by the Systemgerät firmware.
 
 #### Verify Connectivity
 
 After enabling the JSON interface and disabling WEM Portal, verify that:
 
-- The SystemgerÃ¤t is connected to the local network.
-- Home Assistant can reach the SystemgerÃ¤t IP address.
+- The Systemgerät is connected to the local network.
+- Home Assistant can reach the Systemgerät IP address.
 - TCP port 80 is reachable from the Home Assistant host.
-- The configured IP address in the integration matches the SystemgerÃ¤t.
+- The configured IP address in the integration matches the Systemgerät.
 
 Once these requirements are met, the integration can be added to Home Assistant.
 
@@ -152,7 +152,7 @@ Once these requirements are met, the integration can be added to Home Assistant.
 Minimum Home Assistant Core version: **2026.8.0**. For existing installations,
 see the [device registry migration, validation and rollback guide](docs/device-registry-migration.md).
 
-### HACS â€” Custom Repository
+### HACS — Custom Repository
 
 1. Open HACS in Home Assistant.
 2. Go to **Integrations**.
@@ -184,10 +184,10 @@ custom domain `weishaupt_wtc_lan`.
 
 ## Configuration
 
-1. Go to **Settings** â†’ **Devices & Services**.
+1. Go to **Settings** → **Devices & Services**.
 2. Select **Add Integration**.
 3. Search for **Weishaupt WTC LAN**.
-4. Enter the IP address or hostname of the SystemgerÃ¤t.
+4. Enter the IP address or hostname of the Systemgerät.
 5. Optionally adjust the username, password, polling interval, and experimental diagnostics toggles.
 6. Review the detected heating-circuit display names and edit them if needed.
 
@@ -328,9 +328,9 @@ Optional modules such as Solar are only created when inventory detection and set
 
 ## Devices and Entities
 
-### SystemgerÃ¤t
+### Systemgerät
 
-The SystemgerÃ¤t device contains system-wide values:
+The Systemgerät device contains system-wide values:
 
 - system operating mode
 - current system operating-mode display
@@ -354,7 +354,7 @@ component entities remain disabled by default. Validated date byte order is:
 01/00/2563/04 -> day
 ```
 
-### HK1 â€” Integrated Heating Circuit
+### HK1 — Integrated Heating Circuit
 
 HK1 is exposed as its own logical Home Assistant device.
 
@@ -374,7 +374,7 @@ Entities include:
 - flow target temperatures: comfort, normal, reduced, special level, current
 - current flow temperature
 
-### HK2 and HK3 â€” External Heating Circuits
+### HK2 and HK3 — External Heating Circuits
 
 External EM-HK heating circuits are detected automatically and exposed as separate logical Home Assistant devices.
 
@@ -406,8 +406,8 @@ Entities include:
 
 - current status
 - one-shot hot-water push button
-- normal target-temperature slider: **50 to 60 Â°C** in **1 Â°C** steps
-- reduced target-temperature slider: **8 to 60 Â°C** in **1 Â°C** steps
+- normal target-temperature slider: **50 to 60 °C** in **1 °C** steps
+- reduced target-temperature slider: **8 to 60 °C** in **1 °C** steps
 - current target temperature
 - current hot-water temperature
 - circulation return temperature
@@ -463,7 +463,7 @@ device. The stable device identifier remains `<entry_id>_network`.
 
 Entities include:
 
-- GerÃ¤tename, from the optional read-only `06/00/250E/00 VS=16 GETS` string
+- Gerätename, from the optional read-only `06/00/250E/00 VS=16 GETS` string
   read when supported
 - Zertifikat-CN, from the optional read-only `06/00/2511/00 VS=50 GETS` string
   read when supported
@@ -527,7 +527,7 @@ Each detected heating circuit exposes a writable **Operating Mode Target** selec
 
 ### System Operating Mode
 
-The SystemgerÃ¤t exposes a writable **System Operating Mode** select with the confirmed values:
+The Systemgerät exposes a writable **System Operating Mode** select with the confirmed values:
 
 - Standby
 - Summer
@@ -565,18 +565,18 @@ and CanApiJson addresses in
 |---|---:|---:|---:|---:|---:|---|
 | System operating mode | `0x01` | `0x00` | `0x261E` | `0x00` | `1` | enum |
 | HK operating mode target | `0x02` | circuit index | `0x2533` | `0x02` | `1` | enum |
-| Outdoor temperature | `0x01` | `0x00` | `0x26B1` | `0x02` | `2` | Ã— 0.1 Â°C |
-| Plate heat exchanger temperature | `0x01` | `0x00` | `0x261F` | `0x02` | `2` | Ã— 0.1 Â°C |
-| Boiler temperature | `0x07` | `0x00` | `0x2532` | `0x00` | `2` | Ã— 0.1 Â°C |
-| Flue-gas temperature | `0x07` | `0x00` | `0x2533` | `0x02` | `2` | Ã— 0.1 Â°C |
-| Return temperature | `0x07` | `0x00` | `0x2537` | `0x00` | `2` | Ã— 0.1 Â°C |
-| Flow target temperature | `0x07` | `0x00` | `0x2545` | `0x00` | `2` | Ã— 0.1 Â°C |
+| Outdoor temperature | `0x01` | `0x00` | `0x26B1` | `0x02` | `2` | × 0.1 °C |
+| Plate heat exchanger temperature | `0x01` | `0x00` | `0x261F` | `0x02` | `2` | × 0.1 °C |
+| Boiler temperature | `0x07` | `0x00` | `0x2532` | `0x00` | `2` | × 0.1 °C |
+| Flue-gas temperature | `0x07` | `0x00` | `0x2533` | `0x02` | `2` | × 0.1 °C |
+| Return temperature | `0x07` | `0x00` | `0x2537` | `0x00` | `2` | × 0.1 °C |
+| Flow target temperature | `0x07` | `0x00` | `0x2545` | `0x00` | `2` | × 0.1 °C |
 | VPT volume flow | `0x09` | `0x01` | `0x2613` | `0x02` | `2` | l/h |
-| System pressure | `0x09` | `0x01` | `0x2614` | `0x02` | `2` | Ã— 0.01 bar |
-| VPT thermal output | `0x09` | `0x01` | `0x2631` | `0x02` | device-dependent response size | Ã— 0.01 kW |
-| Previous-day heat quantity: heating | `0x09` | `0x01` | `0x2626` | `0x02` | `4` | Ã— 0.01 kWh |
-| Previous-day heat quantity: hot water | `0x09` | `0x01` | `0x2627` | `0x02` | `4` | Ã— 0.01 kWh |
-| Previous-day heat quantity: total | `0x09` | `0x01` | `0x2628` | `0x02` | `4` | Ã— 0.01 kWh |
+| System pressure | `0x09` | `0x01` | `0x2614` | `0x02` | `2` | × 0.01 bar |
+| VPT thermal output | `0x09` | `0x01` | `0x2631` | `0x02` | device-dependent response size | × 0.01 kW |
+| Previous-day heat quantity: heating | `0x09` | `0x01` | `0x2626` | `0x02` | `4` | × 0.01 kWh |
+| Previous-day heat quantity: hot water | `0x09` | `0x01` | `0x2627` | `0x02` | `4` | × 0.01 kWh |
+| Previous-day heat quantity: total | `0x09` | `0x01` | `0x2628` | `0x02` | `4` | × 0.01 kWh |
 | Burner Starts Total | `0x09` | `0x01` | `0x2920` | `0x00` | `2` | count |
 | Burner Operating Hours Total | `0x09` | `0x01` | `0x2921` | `0x00` | `2` | h |
 
@@ -652,7 +652,7 @@ discoverytool/weishaupt-wtc-readonly-package.zip
 This package contains two separate read-only tools:
 
 1. A quick WTC snapshot tool that reads:
-   - confirmed SystemgerÃ¤t, hydraulic, and WTC values
+   - confirmed Systemgerät, hydraulic, and WTC values
    - plausible WTC candidates derived from portal screenshots
    - all previously discovered native WTC response objects
 
@@ -709,7 +709,7 @@ The bundled discovery tools:
 
 Detected HK2 now exposes **Mischerstellung Soll** and **Mischerstellung Ist** as normal read-only percentage sensors. Controller-reported positions were compared with the physical display. HK1/HK3 mixers are not inferred.
 
-The optional heating-circuit candidate setting exposes diagnostic pump states and unconfirmed HK1/HK3 mixer positions. Their ON state has been observed; physical OFF correlation remains open. To inspect the eight new combustion candidates, enable both experimental WTC options. They appear on **WTC Experimental Diagnostics**, retain raw-value metadata and explicitly remain candidates. These options are off by default and add no writable heating controls.
+The optional heating-circuit candidate setting exposes diagnostic pump states and unconfirmed HK1/HK3 mixer positions. Their ON state has been observed; physical OFF correlation remains open. To inspect the eight new combustion candidates, enable both experimental WTC options. They appear on **WTC Experimental Diagnostics**, retain raw-value metadata and use an **EXP** display-name prefix and explicitly remain candidates. Existing unique IDs remain unchanged. These options are off by default and add no writable heating controls.
 
 See [field-validation evidence and limitations](docs/field-validation-0.5.0.md) for addresses, scaling, unsupported readings and the remaining checks. The 0.4.7 device-registry fixes and existing identifiers are retained.
 
