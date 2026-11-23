@@ -10,6 +10,7 @@ import re
 from .const import NETWORK_DEVICE_SUFFIX
 from .sensors import (
     HK1_CANDIDATE_SENSORS,
+    HK2_MIXER_SENSORS,
     HK_CANDIDATE_SENSORS,
     HK_SENSORS,
     NETWORK_SENSORS,
@@ -546,10 +547,13 @@ def build_hk_sensor_definitions(
     """Build sensor definitions for an external heating circuit."""
     base_definitions = list(HK_SENSORS)
     if include_experimental_candidates:
-        base_definitions.extend(HK_CANDIDATE_SENSORS)
+        base_definitions.extend(
+            definition for definition in HK_CANDIDATE_SENSORS
+            if circuit_number != 2 or definition.ox == 0x2546
+        )
 
     if circuit_number == 2:
-        return base_definitions
+        return base_definitions + list(HK2_MIXER_SENSORS)
 
     if circuit_number != 3:
         raise ValueError(f"Unsupported external heating circuit HK{circuit_number}")
@@ -588,7 +592,7 @@ def build_sensor_definitions(
         for sensor_def in SG_SENSORS
         if logical_group_for_sensor(sensor_def) in active_device_groups
     ]
-    if include_experimental_hk_candidates:
+    if include_experimental_hk_candidates and 1 in active_heating_circuits:
         sensor_definitions.extend(HK1_CANDIDATE_SENSORS)
 
     if DEVICE_GROUP_WTC in active_device_groups:

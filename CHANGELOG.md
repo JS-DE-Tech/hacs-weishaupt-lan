@@ -1,18 +1,33 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 - 2026-11-23
 
 ### Added
-- Added documented experimental read-only candidate sensors for field validation of WTC and heating-circuit register candidates.
+- Added normal read-only HK2 mixer target and actual position sensors, correlated with the local device display.
+- Added opt-in diagnostic heating-circuit pump and unconfirmed HK1/HK3 mixer candidates. Pump ON has been observed; OFF remains to be field-validated.
+- Added eight named combustion candidates to extended experimental WTC diagnostics: fan speed/control, gas-valve control, gas/air ratio, and four ionisation signals.
+- Added the internal pump modulation candidate and documented its remaining validation limits.
+- Added field-validation evidence and manual menu mapping; raw zero remains a valid reading.
 
-### Documentation
-- Clarified that experimental candidate sensors remain unconfirmed until validated against real hardware.
-- Added manual-reference mapping between Weishaupt information menu numbers, existing Home Assistant entities, and CanApiJson addresses.
-- Added research candidates derived from external WEM code mappings for later read-only correlation.
-- Documented real-hardware validation of Systemgeraet date/time registers.
-- Confirmed Systemgeraet date/time registers as readable via SRC=DDC.
-- Documented rejected write attempts for year, minute, and combined hour/minute.
-- Marked automatic Systemgeraet time synchronization as not implemented until a writable time-setting mechanism is discovered.
+### Fixed
+- Keep unsigned combustion candidates unsigned rather than interpreting their high bit as a negative value.
+- Avoid duplicate HK2 mixer candidates and avoid adding HK1 candidates when HK1 is absent.
+
+### Notes
+- Combustion candidates are disabled by default and remain read-only diagnostics until simultaneous display comparison confirms meaning and scaling.
+- Gas-valve offset and time-to-flame returned CMD_ERROR in the latest probe and are not exposed as new sensors.
+- Existing 0.4.7 device-registry migration, identifiers, controls and request throttling are retained.
+- Local tests use Home Assistant stubs; the live installation has not been upgraded to 0.5.0.
+
+## 0.4.7 - 2026-10-01
+
+### Fixed
+- Migrated device hierarchy links to real `via_device_id` registry IDs and scoped device lookups to the owning ConfigEntry.
+- Preserved existing device identifiers, entity IDs, user settings and heating controls on setup and reload.
+
+### Changed
+- Raised the minimum Home Assistant Core version to 2026.8.0 for the required device registry APIs.
+- Documented installation, real-instance validation and rollback for existing integrations.
 
 ## 0.4.6 - 2026-06-12
 

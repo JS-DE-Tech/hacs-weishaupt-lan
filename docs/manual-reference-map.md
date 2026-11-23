@@ -65,8 +65,8 @@ Heating-circuit mappings use the current circuit model:
 | `1.6.4` | Heizkreis 2 > Info > Raumsolltemperatur | Current room target temperature | `hk_raumsolltemperatur_aktuell` (`HK Raumsolltemperatur aktuell`) | `02/01/2558/02 VS=2` | confirmed | Scale `0.1 C`, signed. |
 | `1.6.5` | Heizkreis 2 > Info > Vorlaufsolltemperatur | Current flow target temperature | `hk_vorlaufsolltemperatur_aktuell` (`HK Vorlaufsolltemperatur aktuell`) | `02/01/2559/02 VS=2` | confirmed | Scale `0.1 C`, signed. |
 | `1.6.6` | Heizkreis 2 > Info > Vorlaufisttemperatur | Current flow temperature | `hk_vorlaufisttemperatur` (`HK Vorlaufisttemperatur`) | `02/01/2507/02 VS=2` | confirmed | Scale `0.1 C`, signed. |
-| `1.6.7` | Heizkreis 2 > Info > Mischerstellung Soll | Mixer target position | `hk_candidate_mischerstellung_soll` (`HK Kandidat Mischerstellung Soll`) | `02/01/2536/02 VS=1` | experimental candidate | Exposed only when experimental HK candidate sensors are enabled. `VS=2` may still be needed on some hardware and must be validated. |
-| `1.6.8` | Heizkreis 2 > Info > Mischerstellung Ist | Mixer actual position | `hk_candidate_mischerstellung_ist` (`HK Kandidat Mischerstellung Ist`) | `02/01/254F/02 VS=1` | experimental candidate | Exposed only when experimental HK candidate sensors are enabled. `VS=2` may still be needed on some hardware and must be validated. |
+| `1.6.7` | Heizkreis 2 > Info > Mischerstellung Soll | Mixer target position | `hk_mischerstellung_soll` (`HK Mischerstellung Soll`) | `02/01/2536/02 VS=1` | confirmed | Correlated with the physical display; VS=1, raw percent. See field-validation-0.5.0.md. |
+| `1.6.8` | Heizkreis 2 > Info > Mischerstellung Ist | Mixer actual position | `hk_mischerstellung_ist` (`HK Mischerstellung Ist`) | `02/01/254F/02 VS=1` | confirmed | Correlated with the physical display; VS=1, raw percent. See field-validation-0.5.0.md. |
 | `1.6.9` | Heizkreis 2 > Info > Pumpe Heizkreis | Heating-circuit pump state | `hk_candidate_pumpe_heizkreis` (`HK Kandidat Pumpe Heizkreis`) | `02/01/2546/02 VS=1` | experimental candidate | Exposed only when experimental HK candidate sensors are enabled. `VS=1` is plausible for on/off; final VS needs hardware confirmation. |
 | `1.6.10` | Heizkreis 2 > Info > Korrektur Aufheizoptimierung | Heat-up optimization correction | none | unknown | missing | No current confirmed entity or candidate address. |
 | `1.6.11` | Heizkreis 2 > Info > Korrektur Absenkoptimierung | Setback optimization correction | none | unknown | missing | No current confirmed entity or candidate address. |
@@ -153,11 +153,7 @@ entities:
 
 ## Research Candidates From `wem_codes.py`
 
-The external `wem_codes.py` file was not available as a separate readable file
-in this workspace snapshot. The following entries document the labels and
-addresses explicitly supplied in the task request as `wem_codes.py` research
-candidates. They are not confirmed meanings and must not be promoted to regular
-sensors without targeted real-hardware correlation.
+The external [wem_codes.py research reference](https://github.com/geronet1/wem-python/blob/main/wem_codes.py) was inspected for release 0.5.0. Its labels and scales remain research candidates unless corroborated with the local device display. Current GET readability, response widths and validation limits are recorded in [field-validation-0.5.0.md](field-validation-0.5.0.md).
 
 Older WEM/CAN group hints mentioned by the request:
 
@@ -168,6 +164,8 @@ Older WEM/CAN group hints mentioned by the request:
 | `0x584` | Solar | experimental candidate | Older WEM grouping only; no manual-reference mapping added here. |
 
 ### Heating-Circuit Research Candidates
+
+The broad address hypotheses below are retained as research context. HK2 mixer target/actual at MX=01, VS=1 are now confirmed; use the normal `hk_mischerstellung_soll` and `hk_mischerstellung_ist` definitions above. Other mixer addresses and pump OFF remain subject to field validation.
 
 | Manual Ref | Candidate label | HA sensor/entity | CanApiJson address | Status | Notes |
 |---|---|---|---|---|---|
@@ -187,17 +185,17 @@ Older WEM/CAN group hints mentioned by the request:
 |---|---|---|---|---|---|
 | `1.2.1.3` | Sollleistung WE0 | none | unknown | experimental candidate | Possible percentage-based requested output; do not map to kW `wtc_waermeleistung_vpt`. |
 | `1.2.1.4` | Leistung / Istleistung | none | unknown | experimental candidate | Possible percentage-based actual output; do not map to kW `wtc_waermeleistung_vpt`. |
-| `1.2.1.3` | Pumpenleistung Pumpe intern Sollleistung WE0 | `wtc_candidate_pumpe_intern_sollleistung` (`Kandidat Pumpenleistung Pumpe intern Sollleistung`) | `09/01/2619/02 VS=1` | experimental candidate | Exposed through the extended experimental WTC option for field validation. Same address remains available as a curated raw diagnostic candidate. |
+| `1.2.2.2` | Pumpenleistung Pumpe intern Sollleistung WE0 | `wtc_candidate_pumpe_intern_sollleistung` (`Kandidat Pumpenleistung Pumpe intern Sollleistung`) | `09/01/2619/02 VS=1` | experimental candidate | Exposed through the extended experimental WTC option for field validation. Same address remains available as a curated raw diagnostic candidate. |
 | n/a | Pumpenleistung Pumpe intern Elektrische Leistung WE0 | none | unknown | experimental candidate | Candidate label only from request context. |
-| `1.2.1.4` | Geblaese-Ansteuersignal Aktuell WE0 | none | unknown | experimental candidate | Candidate label only from request context. |
-| `1.2.1.4` | Geblaesedrehzahl Aktuell WE0 | none | unknown | experimental candidate | Candidate label only from request context. |
-| `1.2.1.4` | Gasventil Ansteuersignal Aktuell WE0 | none | unknown | experimental candidate | Candidate label only from request context. |
-| n/a | Gas-Luft-Verhaeltnis Aktuell WE0 | none | unknown | experimental candidate | Candidate label only from request context. |
-| n/a | Ionisationssignal Start WE0 | none | unknown | experimental candidate | Candidate label only from request context. |
-| n/a | Ionisationssignal Sollwert WE0 | none | unknown | experimental candidate | Candidate label only from request context. |
-| n/a | Ionisationssignal SCOT-Istwert WE0 | none | unknown | experimental candidate | Candidate label only from request context. |
-| n/a | Ionisationssignal SCOT-Basiswert WE0 | none | unknown | experimental candidate | Candidate label only from request context. |
-| n/a | Zeit bis Flammenbildung Aktuell WE0 | none | unknown | experimental candidate | Candidate label only from request context. |
+| `1.2.1.4` | Geblaese-Ansteuersignal Aktuell WE0 | `wtc_candidate_geblaese_ansteuersignal` | `07/00/257E/00 VS=2` | experimental candidate | Readable in targeted GETs; opt-in diagnostics only. Meaning/scaling still require simultaneous display correlation. |
+| `1.2.1.4` | Geblaesedrehzahl Aktuell WE0 | `wtc_candidate_geblaesedrehzahl` | `07/00/2540/00 VS=2` | experimental candidate | Readable in targeted GETs; opt-in diagnostics only. Meaning/scaling still require simultaneous display correlation. |
+| `1.2.1.4` | Gasventil Ansteuersignal Aktuell WE0 | `wtc_candidate_gasventil_ansteuersignal` | `07/00/253F/00 VS=2` | experimental candidate | Readable in targeted GETs; opt-in diagnostics only. Meaning/scaling still require simultaneous display correlation. |
+| n/a | Gas-Luft-Verhaeltnis Aktuell WE0 | `wtc_candidate_gas_luft_verhaeltnis` | `07/00/257D/00 VS=2` | experimental candidate | Readable in targeted GETs; opt-in diagnostics only. Meaning/scaling still require simultaneous display correlation. |
+| n/a | Ionisationssignal Start WE0 | `wtc_candidate_ionisation_start` | `07/00/257A/00 VS=1` | experimental candidate | Readable in targeted GETs; opt-in diagnostics only. Meaning/scaling still require simultaneous display correlation. |
+| n/a | Ionisationssignal Sollwert WE0 | `wtc_candidate_ionisation_soll` | `07/00/2579/00 VS=1` | experimental candidate | Readable in targeted GETs; opt-in diagnostics only. Meaning/scaling still require simultaneous display correlation. |
+| n/a | Ionisationssignal SCOT-Istwert WE0 | `wtc_candidate_ionisation_scot_ist` | `07/00/2539/00 VS=1` | experimental candidate | Readable in targeted GETs; opt-in diagnostics only. Meaning/scaling still require simultaneous display correlation. |
+| n/a | Ionisationssignal SCOT-Basiswert WE0 | `wtc_candidate_ionisation_scot_basis` | `07/00/253A/00 VS=1` | experimental candidate | Readable in targeted GETs; opt-in diagnostics only. Meaning/scaling still require simultaneous display correlation. |
+| n/a | Zeit bis Flammenbildung Aktuell WE0 | none | `07/00/257B/00 VS=2` | unsupported in latest GET | CMD_ERROR twice; excluded from 0.5.0 candidates. |
 | n/a | Existing curated WTC candidate | `wtc_experimental_09_01_2610_02_02` | `09/01/2610/02 VS=2` | experimental candidate | Current code hint: unconfirmed temperature-related WTC value, probable scale `0.1 C`. |
 | n/a | Existing curated WTC candidate | `wtc_experimental_09_01_2611_02_02` | `09/01/2611/02 VS=2` | experimental candidate | Current code hint: unconfirmed temperature-related WTC value, probable scale `0.1 C`. |
 | n/a | Existing curated WTC candidate | `wtc_experimental_09_01_2612_02_02` | `09/01/2612/02 VS=2` | experimental candidate | Current code hint: unconfirmed temperature-related WTC value, probable scale `0.1 C`. |

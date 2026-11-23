@@ -173,6 +173,28 @@ def params(count: int) -> list[dict[str, int | str]]:
 class ApiClientTests(unittest.IsolatedAsyncioTestCase):
     """Test CanApiJson read behavior."""
 
+    async def test_captured_combustion_responses_exclude_device_errors(self) -> None:
+        """Real CM05 frames must never become valid zero/one combustion readings."""
+        raw_frames = [
+            "020700253900000130", "020700253a0000015b",
+            "020700257900000130", "020700257a00000113",
+            "050700253d0000020001", "050700257b0000020001",
+        ]
+        requested = [
+            {"key": key, "mi": 7, "mx": 0, "ox": ox, "os": 0, "vs": size}
+            for key, ox, size in (
+                ("actual", 0x2539, 1), ("base", 0x253A, 1),
+                ("target", 0x2579, 1), ("start", 0x257A, 1),
+                ("offset", 0x253D, 2), ("flame_time", 0x257B, 1),
+            )
+        ]
+        client = SequenceResponseClient([capi_batch_response(list(reversed(raw_frames)))])
+        result = await client.read_parameters(requested)
+        self.assertEqual({key: value["value_int"] for key, value in result.items()},
+                         {"actual": 48, "base": 91, "target": 48, "start": 19})
+        self.assertEqual(client.payloads[0]["CAPI"]["NN"], 6)
+        self.assertTrue(all(value["VG"].startswith("01") for key, value in client.payloads[0]["CAPI"].items() if key != "NN"))
+
     async def test_post_calls_are_serialized(self) -> None:
         """Concurrent _post calls should run one HTTP request at a time."""
         session = FakeSession()

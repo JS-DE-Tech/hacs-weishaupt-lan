@@ -1,14 +1,16 @@
 {
     "domain": "weishaupt_wtc_lan",
     "name": "Weishaupt WTC LAN",
-    "codeowners": ["@JS-DE-Tech"],
+    "codeowners": [
+        "@JS-DE-Tech"
+    ],
     "config_flow": true,
     "dependencies": [],
     "documentation": "https://github.com/JS-DE-Tech/hacs-weishaupt-lan",
     "iot_class": "local_polling",
     "issue_tracker": "https://github.com/JS-DE-Tech/hacs-weishaupt-lan/issues",
     "requirements": [],
-    "version": "0.4.6",
+    "version": "0.5.0",
     "platforms": [
         "sensor",
         "select",

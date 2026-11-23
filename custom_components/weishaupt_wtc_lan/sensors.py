@@ -8,7 +8,7 @@ VG frame format: CM(1B) MI(1B) MX(1B) OX(2B) OS(1B) VS(2B) VA(xB)
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 
 from homeassistant.components.sensor import (
@@ -82,6 +82,7 @@ class ExperimentalWtcRegister:
     notes: str | None = None
     display_name: str | None = None
     native_scale: float | None = None
+    signed: bool = True  # Preserve legacy raw diagnostic behavior by default.
 
     @property
     def name(self) -> str:
@@ -1476,6 +1477,25 @@ HK_CANDIDATE_SENSORS: list[WeishauptSensorDefinition] = [
 ]
 
 
+# Field-correlated on HK2 only. Do not infer a mixer on HK1 or HK3.
+# Keep diagnostic candidates opt-in; explicit opt-in enables their entities.
+for _candidate in (*HK1_CANDIDATE_SENSORS, *HK_CANDIDATE_SENSORS):
+    _candidate.entity_category = "diagnostic"
+    _candidate.entity_registry_enabled_default = True
+
+HK2_MIXER_SENSORS: list[WeishauptSensorDefinition] = [
+    replace(
+        definition,
+        key=definition.key.replace("_candidate_", "_", 1),
+        name=definition.name.replace("Kandidat ", "", 1),
+        modbus_reg="validated " + definition.modbus_reg.removeprefix("candidate "),
+        entity_category=None,
+    )
+    for definition in HK_CANDIDATE_SENSORS
+    if definition.ox in (0x2536, 0x254F)
+]
+
+
 EXPERIMENTAL_WTC_HINT = "Unconfirmed dynamic WTC value"
 
 
@@ -1494,6 +1514,7 @@ def _experimental_wtc_register(
     display_name: str | None = None,
     native_scale: float | None = None,
     key: str | None = None,
+    signed: bool = True,
 ) -> ExperimentalWtcRegister:
     return ExperimentalWtcRegister(
         key=key or f"wtc_experimental_{mi:02x}_{mx:02x}_{ox:04x}_{os:02x}_{vs:02d}",
@@ -1509,6 +1530,7 @@ def _experimental_wtc_register(
         notes=notes,
         display_name=display_name,
         native_scale=native_scale,
+        signed=signed,
     )
 
 
@@ -1606,6 +1628,126 @@ EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
             "Concrete candidate for internal pump modulation. Same address as a "
             "curated raw WTC experimental register; this named entity is exposed "
             "only through the extended experimental option."
+        ),
+    ),
+    _experimental_wtc_register(
+        0x07, 0x00, 0x2540, 0x00, 2,
+        key="wtc_candidate_geblaesedrehzahl",
+        display_name="Kandidat Gebläsedrehzahl",
+        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
+        confidence="experimental",
+        probable_unit='rpm',
+        probable_scale=1.0,
+        native_scale=1.0,
+        signed=False,
+        notes=(
+            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
+            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+        ),
+    ),
+    _experimental_wtc_register(
+        0x07, 0x00, 0x257E, 0x00, 2,
+        key="wtc_candidate_geblaese_ansteuersignal",
+        display_name="Kandidat Gebläse-Ansteuersignal",
+        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
+        confidence="experimental",
+        probable_unit='%',
+        probable_scale=0.01,
+        native_scale=0.01,
+        signed=False,
+        notes=(
+            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
+            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+        ),
+    ),
+    _experimental_wtc_register(
+        0x07, 0x00, 0x253F, 0x00, 2,
+        key="wtc_candidate_gasventil_ansteuersignal",
+        display_name="Kandidat Gasventil-Ansteuersignal",
+        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
+        confidence="experimental",
+        probable_unit='%',
+        probable_scale=0.01,
+        native_scale=0.01,
+        signed=False,
+        notes=(
+            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
+            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+        ),
+    ),
+    _experimental_wtc_register(
+        0x07, 0x00, 0x257D, 0x00, 2,
+        key="wtc_candidate_gas_luft_verhaeltnis",
+        display_name="Kandidat Gas-Luft-Verhältnis",
+        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
+        confidence="experimental",
+        probable_unit='%',
+        probable_scale=0.01,
+        native_scale=0.01,
+        signed=False,
+        notes=(
+            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
+            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+        ),
+    ),
+    _experimental_wtc_register(
+        0x07, 0x00, 0x2579, 0x00, 1,
+        key="wtc_candidate_ionisation_soll",
+        display_name="Kandidat Ionisationssignal Sollwert",
+        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
+        confidence="experimental",
+        probable_unit='Pkt.',
+        probable_scale=1.0,
+        native_scale=1.0,
+        signed=False,
+        notes=(
+            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
+            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+        ),
+    ),
+    _experimental_wtc_register(
+        0x07, 0x00, 0x257A, 0x00, 1,
+        key="wtc_candidate_ionisation_start",
+        display_name="Kandidat Ionisationssignal Start",
+        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
+        confidence="experimental",
+        probable_unit='Pkt.',
+        probable_scale=1.0,
+        native_scale=1.0,
+        signed=False,
+        notes=(
+            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
+            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+        ),
+    ),
+    _experimental_wtc_register(
+        0x07, 0x00, 0x2539, 0x00, 1,
+        key="wtc_candidate_ionisation_scot_ist",
+        display_name="Kandidat Ionisationssignal SCOT-Istwert",
+        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
+        confidence="experimental",
+        probable_unit='Pkt.',
+        probable_scale=1.0,
+        native_scale=1.0,
+        signed=False,
+        notes=(
+            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
+            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+        ),
+    ),
+    _experimental_wtc_register(
+        0x07, 0x00, 0x253A, 0x00, 1,
+        key="wtc_candidate_ionisation_scot_basis",
+        display_name="Kandidat Ionisationssignal SCOT-Basiswert",
+        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
+        confidence="experimental",
+        probable_unit='Pkt.',
+        probable_scale=1.0,
+        native_scale=1.0,
+        signed=False,
+        notes=(
+            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
+            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
         ),
     ),
 )
@@ -1922,7 +2064,7 @@ SOL_SENSORS: list[WeishauptSensorDefinition] = [
 # ============================================================================
 
 ALL_SENSORS: list[WeishauptSensorDefinition] = (
-    SG_SENSORS + WTC_SENSORS + HK_SENSORS + SOL_SENSORS
+    SG_SENSORS + WTC_SENSORS + HK_SENSORS + HK2_MIXER_SENSORS + SOL_SENSORS
 )
 
 POLLED_SENSORS: list[WeishauptSensorDefinition] = [

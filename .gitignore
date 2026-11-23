@@ -7,3 +7,5 @@ build/
 venv/
 .env
 *.egg-info/
+# Private field observations and original measurement records
+/local-diagnostics/
