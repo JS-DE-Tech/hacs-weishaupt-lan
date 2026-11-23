@@ -12,7 +12,7 @@ import sys
 import tempfile
 import types
 import unittest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -146,6 +146,16 @@ load_module(
     "custom_components.weishaupt_wtc_lan.coordinator",
     PACKAGE_ROOT / "coordinator.py",
 )
+exceptions = types.ModuleType("homeassistant.exceptions")
+
+
+class ConfigEntryNotReady(Exception):
+    pass
+
+
+exceptions.ConfigEntryNotReady = ConfigEntryNotReady
+sys.modules["homeassistant.exceptions"] = exceptions
+
 integration = load_module(
     "custom_components.weishaupt_wtc_lan", PACKAGE_ROOT / "__init__.py"
 )
@@ -370,6 +380,60 @@ class IntegrationHelperTests(unittest.IsolatedAsyncioTestCase):
         """Restore production write timings."""
         coordinator_module.WRITE_DEBOUNCE_SECONDS = self._original_write_debounce
         coordinator_module.POST_WRITE_SETTLE_SECONDS = self._original_post_write_settle
+
+    async def test_offline_setup_retries_before_registry_or_discovery_changes(self) -> None:
+        entry = SimpleNamespace(
+            entry_id="entry",
+            data={"host": "test", "username": "u", "password": "p"},
+            options={},
+        )
+        for result in (False, integration.WeishauptApiError("unreachable")):
+            client = SimpleNamespace(
+                test_connection=AsyncMock(), fetch_systable_csv=AsyncMock()
+            )
+            if isinstance(result, Exception):
+                client.test_connection.side_effect = result
+            else:
+                client.test_connection.return_value = result
+            hass = SimpleNamespace(data={"unchanged": True})
+            with (
+                patch.object(integration, "WeishauptApiClient", return_value=client),
+                patch.object(integration, "async_get_clientsession", return_value=None),
+            ):
+                with self.assertRaises(integration.ConfigEntryNotReady):
+                    await integration.async_setup_entry(hass, entry)
+            client.fetch_systable_csv.assert_not_awaited()
+            self.assertEqual(hass.data, {"unchanged": True})
+
+    async def test_connection_recovers_on_subsequent_setup_attempt(self) -> None:
+        client = SimpleNamespace(test_connection=AsyncMock(side_effect=[False, True]))
+        with self.assertRaises(integration.ConfigEntryNotReady):
+            await integration._async_require_setup_connection(client)
+        await integration._async_require_setup_connection(client)
+        self.assertEqual(client.test_connection.await_count, 2)
+
+    def test_known_devices_retry_on_error_or_missing_response(self) -> None:
+        lookup = unittest.mock.Mock(
+            return_value=SimpleNamespace(id="existing", name_by_user="unchanged")
+        )
+        registry = SimpleNamespace(async_get_device_by_identifier=lookup)
+        with patch.object(integration.dr, "async_get", return_value=registry):
+            for suffix in ("hk", "hk3", "network", "wtc", "ww", "sol"):
+                for status in (integration.ProbeStatus.ABSENT, integration.ProbeStatus.UNKNOWN):
+                    with self.assertRaises(integration.ConfigEntryNotReady):
+                        integration._require_known_device_response(
+                        object(), SimpleNamespace(entry_id="entry"), suffix, status
+                    )
+                    lookup.assert_called_with((integration.DOMAIN, f"entry_{suffix}"), "entry")
+            integration._require_known_device_response(
+                object(), SimpleNamespace(entry_id="entry"), "hk",
+                integration.ProbeStatus.PRESENT,
+            )
+            lookup.return_value = None
+            integration._require_known_device_response(
+                object(), SimpleNamespace(entry_id="other"), "hk",
+                integration.ProbeStatus.ABSENT,
+            )
 
     def test_persisted_scan_interval_is_clamped_in_actual_coordinator(self) -> None:
         for stored, expected in ((10, 30), (0, 30), (30, 30), (120, 120), (900, 600), ("60", 60), (None, 30), ("invalid", 30)):
@@ -959,10 +1023,10 @@ class IntegrationHelperTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Plattenwaermetauscher", summary_text)
             self.assertNotIn("Admin123", summary_text)
 
-    async def test_cleanup_removes_stale_experimental_device_without_foreign_entries(
+    async def test_cleanup_retains_existing_device_even_when_probes_mark_it_inactive(
         self,
     ) -> None:
-        """Cleanup should remove only stale integration-owned device contents."""
+        """Probe-based cleanup must never remove existing registry records."""
         device = SimpleNamespace(
             id="device-1",
             config_entry_id="entry-123",
@@ -988,8 +1052,8 @@ class IntegrationHelperTests(unittest.IsolatedAsyncioTestCase):
             inactive_suffixes={"wtc_experimental"},
         )
 
-        self.assertEqual(entity_registry.removed, ["sensor.experimental"])
-        self.assertEqual(device_registry.removed, ["device-1"])
+        self.assertEqual(entity_registry.removed, [])
+        self.assertEqual(device_registry.removed, [])
 
     async def test_cleanup_skips_device_with_foreign_entities(self) -> None:
         """Cleanup should not remove devices containing unrelated entities."""

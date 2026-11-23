@@ -515,76 +515,98 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(definition.entity_category, "diagnostic")
                 self.assertIn("EXP", definition.name)
 
-    def test_combustion_field_samples_remain_experimental(self) -> None:
-        """Decode captured payloads without silently promoting candidate semantics."""
+    def test_confirmed_combustion_samples_use_regular_boiler_entities(self) -> None:
+        """Confirmed samples retain decoding with fresh IDs and no EXP label."""
         samples = {
-            0x2540: ("03e3", 995, "rpm"),
-            0x257E: ("0405", 10.29, "%"),
-            0x253F: ("0c61", 31.69, "%"),
-            0x257D: ("16f0", 58.72, "%"),
-            0x2579: ("30", 48, "Pkt."),
-            0x257A: ("13", 19, "Pkt."),
-            0x2539: ("30", 48, "Pkt."),
-            0x253A: ("5b", 91, "Pkt."),
+            "wtc_geblaesedrehzahl": (0x2540, "03e3", 995, "rpm"),
+            "wtc_geblaese_ansteuersignal": (0x257E, "0405", 10.29, "%"),
+            "wtc_gasventil_ansteuersignal": (0x253F, "0c61", 31.69, "%"),
+            "wtc_gas_luft_verhaeltnis": (0x257D, "16f0", 58.72, "%"),
+            "wtc_ionisation_soll": (0x2579, "30", 48, "Pkt."),
+            "wtc_ionisation_start": (0x257A, "13", 19, "Pkt."),
+            "wtc_ionisation_scot_ist": (0x2539, "30", 48, "Pkt."),
+            "wtc_ionisation_scot_basis": (0x253A, "5b", 91, "Pkt."),
         }
-        registers = [r for r in sensors.EXTENDED_EXPERIMENTAL_WTC_REGISTERS if r.mi == 7]
-        self.assertEqual({r.ox for r in registers}, set(samples))
-        for register in registers:
-            raw_hex, expected, unit = samples[register.ox]
-            self.assertEqual((register.mx, register.os, register.vs), (0, 0, len(raw_hex) // 2))
-            self.assertEqual(register.confidence, "experimental")
-            self.assertFalse(register.signed)
-            self.assertNotIn(register.key, {d.key for d in sensors.ALL_SENSORS})
-            coordinator = SimpleNamespace(data={register.key: {"value_int": int(raw_hex, 16), "value_hex": raw_hex}})
-            entity = sensor.WeishauptExperimentalWtcSensorEntity(coordinator, register, SimpleNamespace(entry_id="test"))
-            self.assertEqual(entity.native_value, expected)
-            self.assertEqual(entity._attr_native_unit_of_measurement, unit)
-            self.assertEqual(entity._attr_entity_category, "diagnostic")
-            self.assertEqual(entity.extra_state_attributes["raw_unsigned"], int(raw_hex, 16))
-            coordinator.data[register.key] = {"value_int": 0, "value_hex": "00" * register.vs}
-            self.assertTrue(entity.available)
-            self.assertEqual(entity.native_value, 0)
-            coordinator.data = {}
-            self.assertFalse(entity.available)
-            self.assertIsNone(entity.native_value)
+        definitions = [d for d in sensors.CONFIRMED_WTC_SENSORS if d.mi == 7]
+        self.assertEqual({d.key for d in definitions}, set(samples))
+        for definition in definitions:
+            with self.subTest(key=definition.key):
+                ox, raw_hex, expected, unit = samples[definition.key]
+                self.assertEqual(
+                    (definition.mx, definition.ox, definition.os, definition.vs),
+                    (0, ox, 0, len(raw_hex) // 2),
+                )
+                self.assertFalse(definition.signed)
+                self.assertIsNone(definition.entity_category)
+                coordinator = SimpleNamespace(
+                    data={definition.key: {"value_int": int(raw_hex, 16), "value_hex": raw_hex}},
+                    system_device_id="root",
+                )
+                entity = sensor.WeishauptSensorEntity(
+                    coordinator, definition, SimpleNamespace(entry_id="test", data={})
+                )
+                self.assertEqual(entity._attr_unique_id, "test_" + definition.key)
+                self.assertNotIn("candidate", entity._attr_unique_id)
+                self.assertNotIn("EXP", entity._attr_name)
+                self.assertEqual(entity.native_value, expected)
+                self.assertEqual(entity._attr_native_unit_of_measurement, unit)
+                self.assertEqual(entity.device_info["identifiers"], {("weishaupt_wtc_lan", "test_wtc")})
+                self.assertEqual(entity.extra_state_attributes["confidence"], "confirmed")
+                coordinator.data[definition.key] = {"value_int": 0, "value_hex": "00" * definition.vs}
+                self.assertTrue(entity.available)
+                self.assertEqual(entity.native_value, 0)
+                for invalid in sensor.SENTINEL_VALUES.get(definition.vs, set()):
+                    coordinator.data[definition.key] = {"value_int": invalid}
+                    self.assertFalse(entity.available)
+                    self.assertIsNone(entity.native_value)
+                coordinator.data = {}
+                self.assertFalse(entity.available)
+                self.assertIsNone(entity.native_value)
 
     def test_unsigned_ionisation_does_not_wrap_negative(self) -> None:
-        """One-byte SCOT values above 127 must remain unsigned."""
-        register = next(r for r in sensors.EXTENDED_EXPERIMENTAL_WTC_REGISTERS if r.ox == 0x253A)
-        entity = sensor.WeishauptExperimentalWtcSensorEntity(
-            SimpleNamespace(data={register.key: {"value_int": 200, "value_hex": "c8"}}),
-            register, SimpleNamespace(entry_id="test"),
+        """One-byte SCOT values above 127 must remain unsigned after promotion."""
+        definition = sensor_by_key("wtc_ionisation_scot_basis")
+        entity = sensor.WeishauptSensorEntity(
+            SimpleNamespace(data={definition.key: {"value_int": 200, "value_hex": "c8"}}),
+            definition, SimpleNamespace(entry_id="test"),
         )
         self.assertEqual(entity.native_value, 200)
-        self.assertEqual(entity.extra_state_attributes["raw_signed"], -56)
-        self.assertFalse(entity.extra_state_attributes["value_signed"])
+        self.assertFalse(definition.signed)
 
-    def test_extended_wtc_candidate_uses_documented_address_and_scaling(self) -> None:
-        """Documented WTC candidates should stay extended and explicitly scaled."""
-        register = sensors.EXTENDED_EXPERIMENTAL_WTC_REGISTERS[0]
-        self.assertEqual(register.key, "wtc_candidate_pumpe_intern_sollleistung")
+    def test_confirmed_internal_pump_uses_new_id_and_percentage(self) -> None:
+        definition = sensor_by_key("wtc_pumpe_intern_sollleistung")
         self.assertEqual(
-            (register.mi, register.mx, register.ox, register.os, register.vs),
+            (definition.mi, definition.mx, definition.ox, definition.os, definition.vs),
             (0x09, 0x01, 0x2619, 0x02, 1),
         )
-        self.assertEqual(register.probable_unit, "%")
-        self.assertEqual(register.native_scale, 1.0)
-
-        coordinator = SimpleNamespace(
-            data={register.key: {"value_int": 57, "value_hex": "39"}}
-        )
-        entity = sensor.WeishauptExperimentalWtcSensorEntity(
-            coordinator=coordinator,
-            register=register,
-            entry=SimpleNamespace(entry_id="entry-123"),
-        )
-
-        self.assertEqual(
-            entity._attr_name,
-            "EXP Pumpenleistung Pumpe intern Sollleistung",
-        )
+        coordinator = SimpleNamespace(data={definition.key: {"value_int": 100, "value_hex": "64"}})
+        entity = sensor.WeishauptSensorEntity(coordinator, definition, SimpleNamespace(entry_id="entry-123"))
+        self.assertEqual(entity._attr_unique_id, "entry-123_wtc_pumpe_intern_sollleistung")
+        self.assertEqual(entity._attr_name, "Pumpenleistung Pumpe intern Sollleistung")
         self.assertEqual(entity._attr_native_unit_of_measurement, "%")
-        self.assertEqual(entity.native_value, 57.0)
+        self.assertEqual(entity.native_value, 100)
+
+    async def test_confirmed_wtc_setup_does_not_require_experimental_options(self) -> None:
+        """All nine are regular read-only boiler sensors without opt-in or duplicates."""
+        coordinator, entry = self._migration_fixture()
+        coordinator.experimental_wtc_registers = []
+        coordinator.extended_experimental_wtc_registers = []
+        entities = await self._add_migration_entities(
+            coordinator, entry, [sensor, select_platform, number_platform, button_platform]
+        )
+        keys = {d.key for d in sensors.CONFIRMED_WTC_SENSORS}
+        self.assertEqual(len(keys), 9)
+        selected = [e for e in entities if e._attr_unique_id in {f"entry-123_{key}" for key in keys}]
+        self.assertEqual(len(selected), 9)
+        for entity in selected:
+            self.assertIsInstance(entity, sensor.WeishauptSensorEntity)
+            self.assertIsNone(getattr(entity, "_attr_entity_category", None))
+            self.assertNotIn("exp", entity._attr_unique_id)
+            self.assertFalse(heating_circuits.is_writable_operating_mode_definition(entity._sensor_def))
+        self.assertTrue(keys.isdisjoint({r.key for r in sensors.EXPERIMENTAL_WTC_REGISTERS}))
+        self.assertTrue(keys.isdisjoint({r.key for r in sensors.EXTENDED_EXPERIMENTAL_WTC_REGISTERS}))
+        without_boiler = heating_circuits.build_sensor_definitions([1], {"system"})
+        self.assertTrue(keys.isdisjoint({d.key for d in without_boiler}))
 
     def test_vpt_power_zero_is_valid_for_adaptive_value_sizes(self) -> None:
         """WTC VPT power should expose raw zero as 0.0 kW for VS=4 and VS=2."""

@@ -67,7 +67,7 @@ class WeishauptSensorDefinition:
 
 @dataclass(frozen=True)
 class ExperimentalWtcRegister:
-    """Read-only WTC register candidate for experimental diagnostics."""
+    """Read-only register metadata, also retained for promoted legacy entities."""
 
     key: str
     mi: int
@@ -1621,150 +1621,174 @@ EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
 )
 
 
-EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
+# Promoted by explicit owner confirmation on 2026-11-23. The owner requested
+# new regular entity identities without EXP/candidate names for these nine values.
+CONFIRMED_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = (
     _experimental_wtc_register(
         0x09,
         0x01,
         0x2619,
         0x02,
         1,
-        key="wtc_candidate_pumpe_intern_sollleistung",
-        display_name="EXP Pumpenleistung Pumpe intern Sollleistung",
-        hint=(
-            "Experimental candidate from manual-reference mapping / WEM research. "
-            "Meaning and scaling require real-hardware validation. Read-only."
-        ),
-        confidence="experimental",
+        key="wtc_pumpe_intern_sollleistung",
+        display_name="Pumpenleistung Pumpe intern Sollleistung",
+        hint="User-confirmed reading, 2026-11-23; read-only.",
+        confidence="confirmed",
         probable_unit=PERCENTAGE,
         probable_scale=1.0,
         native_scale=1.0,
+        signed=False,
         notes=(
-            "Concrete candidate for internal pump modulation. Same address as a "
-            "curated raw WTC experimental register; this named entity is exposed "
-            "only through the extended experimental option."
+            "Confirmed by the installation owner on 2026-11-23. "
+            "See docs/confirmed-wtc-readings.md. New regular entity identity requested by the owner."
         ),
     ),
     _experimental_wtc_register(
         0x07, 0x00, 0x2540, 0x00, 2,
-        key="wtc_candidate_geblaesedrehzahl",
-        display_name="EXP Gebläsedrehzahl",
-        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
-        confidence="experimental",
+        key="wtc_geblaesedrehzahl",
+        display_name="Gebläsedrehzahl",
+        hint="User-confirmed reading, 2026-11-23; read-only.",
+        confidence="confirmed",
         probable_unit='rpm',
         probable_scale=1.0,
         native_scale=1.0,
         signed=False,
         notes=(
-            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
-            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+            "Confirmed by the installation owner on 2026-11-23. "
+            "See docs/confirmed-wtc-readings.md. New regular entity identity requested by the owner."
         ),
     ),
     _experimental_wtc_register(
         0x07, 0x00, 0x257E, 0x00, 2,
-        key="wtc_candidate_geblaese_ansteuersignal",
-        display_name="EXP Gebläse-Ansteuersignal",
-        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
-        confidence="experimental",
+        key="wtc_geblaese_ansteuersignal",
+        display_name="Gebläse-Ansteuersignal",
+        hint="User-confirmed reading, 2026-11-23; read-only.",
+        confidence="confirmed",
         probable_unit='%',
         probable_scale=0.01,
         native_scale=0.01,
         signed=False,
         notes=(
-            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
-            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+            "Confirmed by the installation owner on 2026-11-23. "
+            "See docs/confirmed-wtc-readings.md. New regular entity identity requested by the owner."
         ),
     ),
     _experimental_wtc_register(
         0x07, 0x00, 0x253F, 0x00, 2,
-        key="wtc_candidate_gasventil_ansteuersignal",
-        display_name="EXP Gasventil-Ansteuersignal",
-        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
-        confidence="experimental",
+        key="wtc_gasventil_ansteuersignal",
+        display_name="Gasventil-Ansteuersignal",
+        hint="User-confirmed reading, 2026-11-23; read-only.",
+        confidence="confirmed",
         probable_unit='%',
         probable_scale=0.01,
         native_scale=0.01,
         signed=False,
         notes=(
-            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
-            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+            "Confirmed by the installation owner on 2026-11-23. "
+            "See docs/confirmed-wtc-readings.md. New regular entity identity requested by the owner."
         ),
     ),
     _experimental_wtc_register(
         0x07, 0x00, 0x257D, 0x00, 2,
-        key="wtc_candidate_gas_luft_verhaeltnis",
-        display_name="EXP Gas-Luft-Verhältnis",
-        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
-        confidence="experimental",
+        key="wtc_gas_luft_verhaeltnis",
+        display_name="Gas-Luft-Verhältnis",
+        hint="User-confirmed reading, 2026-11-23; read-only.",
+        confidence="confirmed",
         probable_unit='%',
         probable_scale=0.01,
         native_scale=0.01,
         signed=False,
         notes=(
-            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
-            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+            "Confirmed by the installation owner on 2026-11-23. "
+            "See docs/confirmed-wtc-readings.md. New regular entity identity requested by the owner."
         ),
     ),
     _experimental_wtc_register(
         0x07, 0x00, 0x2579, 0x00, 1,
-        key="wtc_candidate_ionisation_soll",
-        display_name="EXP Ionisationssignal Sollwert",
-        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
-        confidence="experimental",
+        key="wtc_ionisation_soll",
+        display_name="Ionisationssignal Sollwert",
+        hint="User-confirmed reading, 2026-11-23; read-only.",
+        confidence="confirmed",
         probable_unit='Pkt.',
         probable_scale=1.0,
         native_scale=1.0,
         signed=False,
         notes=(
-            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
-            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+            "Confirmed by the installation owner on 2026-11-23. "
+            "See docs/confirmed-wtc-readings.md. New regular entity identity requested by the owner."
         ),
     ),
     _experimental_wtc_register(
         0x07, 0x00, 0x257A, 0x00, 1,
-        key="wtc_candidate_ionisation_start",
-        display_name="EXP Ionisationssignal Start",
-        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
-        confidence="experimental",
+        key="wtc_ionisation_start",
+        display_name="Ionisationssignal Start",
+        hint="User-confirmed reading, 2026-11-23; read-only.",
+        confidence="confirmed",
         probable_unit='Pkt.',
         probable_scale=1.0,
         native_scale=1.0,
         signed=False,
         notes=(
-            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
-            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+            "Confirmed by the installation owner on 2026-11-23. "
+            "See docs/confirmed-wtc-readings.md. New regular entity identity requested by the owner."
         ),
     ),
     _experimental_wtc_register(
         0x07, 0x00, 0x2539, 0x00, 1,
-        key="wtc_candidate_ionisation_scot_ist",
-        display_name="EXP Ionisationssignal SCOT-Istwert",
-        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
-        confidence="experimental",
+        key="wtc_ionisation_scot_ist",
+        display_name="Ionisationssignal SCOT-Istwert",
+        hint="User-confirmed reading, 2026-11-23; read-only.",
+        confidence="confirmed",
         probable_unit='Pkt.',
         probable_scale=1.0,
         native_scale=1.0,
         signed=False,
         notes=(
-            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
-            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+            "Confirmed by the installation owner on 2026-11-23. "
+            "See docs/confirmed-wtc-readings.md. New regular entity identity requested by the owner."
         ),
     ),
     _experimental_wtc_register(
         0x07, 0x00, 0x253A, 0x00, 1,
-        key="wtc_candidate_ionisation_scot_basis",
-        display_name="EXP Ionisationssignal SCOT-Basiswert",
-        hint="Readable WTC register; meaning/scaling require simultaneous display correlation.",
-        confidence="experimental",
+        key="wtc_ionisation_scot_basis",
+        display_name="Ionisationssignal SCOT-Basiswert",
+        hint="User-confirmed reading, 2026-11-23; read-only.",
+        confidence="confirmed",
         probable_unit='Pkt.',
         probable_scale=1.0,
         native_scale=1.0,
         signed=False,
         notes=(
-            "GET response verified 2026-11-23. CAN research: geronet1/wem-python "
-            "wem_codes.py. See docs/field-validation-0.5.0.md. Read-only, not a control."
+            "Confirmed by the installation owner on 2026-11-23. "
+            "See docs/confirmed-wtc-readings.md. New regular entity identity requested by the owner."
         ),
     ),
 )
+CONFIRMED_WTC_REGISTERS_BY_KEY = {
+    register.key: register for register in CONFIRMED_WTC_REGISTERS
+}
+CONFIRMED_WTC_SENSORS: list[WeishauptSensorDefinition] = [
+    WeishauptSensorDefinition(
+        key=register.key,
+        name=register.name,
+        mi=register.mi,
+        mx=register.mx,
+        ox=register.ox,
+        os=register.os,
+        vs=register.vs,
+        group=WeishauptDeviceGroup.WTC,
+        modbus_reg="CanApiJson (owner confirmed 2026-11-23)",
+        unit=register.probable_unit,
+        scale=register.native_scale if register.native_scale is not None else 1.0,
+        signed=register.signed,
+        entity_registry_enabled_default=True,
+    )
+    for register in CONFIRMED_WTC_REGISTERS
+]
+WTC_SENSORS.extend(CONFIRMED_WTC_SENSORS)
+
+# The nine former extended candidates now belong to the regular boiler device.
+EXTENDED_EXPERIMENTAL_WTC_REGISTERS: tuple[ExperimentalWtcRegister, ...] = ()
 EXTENDED_EXPERIMENTAL_WTC_MAX_ENTITIES = 100
 
 

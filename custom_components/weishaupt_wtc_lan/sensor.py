@@ -34,6 +34,7 @@ from .parsing import (
     extract_value_segment,
 )
 from .sensors import (
+    CONFIRMED_WTC_REGISTERS_BY_KEY,
     ExperimentalWtcRegister,
     WeishauptDeviceGroup,
     WeishauptSensorDefinition,
@@ -375,6 +376,11 @@ class WeishauptSensorEntity(
                 is not None
             )
 
+        if register := CONFIRMED_WTC_REGISTERS_BY_KEY.get(self._sensor_def.key):
+            data = (self.coordinator.data or {}).get(register.key)
+            raw = data.get("value_int") if data is not None else None
+            return super().available and raw is not None and raw not in _sentinel_values(register.vs)
+
         data_key = self._sensor_def.source_key or self._sensor_def.key
         return (
             super().available
@@ -408,6 +414,8 @@ class WeishauptSensorEntity(
             return None
 
         sensor_def = self._sensor_def
+        if sensor_def.key in CONFIRMED_WTC_REGISTERS_BY_KEY and not self.available:
+            return None
 
         # Special handling for the consolidated device time sensor
         if sensor_def.key == "sg_device_time":
@@ -479,6 +487,10 @@ class WeishauptSensorEntity(
             "modbus_register": self._sensor_def.modbus_reg,
             "device_group": self._sensor_def.group.value,
         }
+
+        if self._sensor_def.key in CONFIRMED_WTC_REGISTERS_BY_KEY:
+            attrs["confidence"] = "confirmed"
+            attrs["confirmation_source"] = "owner, 2026-11-23"
 
         if self._sensor_def.source_key is not None:
             attrs["source_sensor"] = self._sensor_def.source_key

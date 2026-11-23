@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.1 - 2026-11-23
+
+### Changed
+- Promote the nine owner-confirmed combustion and internal-pump readings to regular read-only sensors on the boiler device, without EXP labels or experimental opt-in.
+- Create fresh regular identities for these nine sensors at the owner's explicit request. Other existing entity identities remain unchanged; old EXP registry/history records are not automatically deleted.
+- Record owner confirmation separately from historical independent field measurements in `docs/confirmed-wtc-readings.md`.
+
+### Fixed
+- Retry setup when the boiler is unreachable instead of creating a partial device inventory.
+- Retain registered devices and entities when discovery is incomplete or returns an error. Previously known devices that stop responding cause setup to retry instead of being deleted.
+- Add regression coverage for offline startup, restored connectivity and registry preservation. Disabling optional diagnostics also retains their registry records.
+
 ## 0.5.0 - 2026-11-23
 
 ### Added

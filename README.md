@@ -252,8 +252,8 @@ Enable extended experimental read-only WTC sensors
 
 This option is also disabled by default and is only evaluated when the curated
 experimental option is enabled. The extended catalog is capped at 100 explicitly
-listed entities and is currently empty because the committed discovery artifacts
-are broad scan outputs, not a defensible curated address list.
+listed entities. It is currently empty: the nine previously extended WTC readings
+have been owner-confirmed and moved to the regular boiler device.
 
 For correlation work, call the Home Assistant service:
 
@@ -704,6 +704,14 @@ The bundled discovery tools:
 - support checkpoint-based continuation for longer scans
 - export results for offline analysis
 
+
+## Version 0.5.1: confirmed WTC readings and offline-start recovery
+
+Nine readings are now regular read-only sensors under the boiler device: fan speed, fan control, gas-valve control, gas/air ratio, four ionisation readings and internal pump target percentage. They have no EXP label and do not require experimental options. The owner explicitly requested **new regular entity IDs without EXP** for these nine readings. Other existing entity identities are unchanged. Old EXP registry/history records are retained rather than automatically deleted.
+
+If the boiler is switched off during startup, setup now retries automatically and retains registry records instead of deleting unresponsive devices. See [0.5.1 installation and recovery](docs/release-0.5.1.md).
+
+See [confirmed readings and entity identity](docs/confirmed-wtc-readings.md) for the exact registers, confirmation source and migration behavior. The section below describes the already-published 0.5.0 state.
 
 ## Version 0.5.0 field-validated additions
 

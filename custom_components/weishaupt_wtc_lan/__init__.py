@@ -14,11 +14,12 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
-from .api import ProbeStatus, WeishauptApiClient
+from .api import ProbeStatus, WeishauptApiClient, WeishauptApiError
 from .const import (
     CONF_DETECTED_HEATING_CIRCUIT_NAMES,
     CONF_ENABLE_EXPERIMENTAL_HK_CANDIDATE_SENSORS,
@@ -185,6 +186,8 @@ async def _async_probe_experimental_wtc_registers(
     registers: tuple[ExperimentalWtcRegister, ...] = EXPERIMENTAL_WTC_REGISTERS,
 ) -> list[ExperimentalWtcRegister]:
     """Return curated experimental WTC registers with setup-time responses."""
+    if not registers:
+        return []
     params = [
         {
             "key": register.key,
@@ -638,34 +641,42 @@ async def _async_register_services(hass: HomeAssistant) -> None:
 async def _async_cleanup_inactive_devices(
     hass: HomeAssistant, entry: ConfigEntry, inactive_suffixes: set[str]
 ) -> None:
-    """Remove stale integration-owned entities/devices for inactive groups."""
-    if not inactive_suffixes:
-        return
-
-    entity_registry = er.async_get(hass)
-    device_registry = dr.async_get(hass)
-
-    for suffix in inactive_suffixes:
-        device = device_registry.async_get_device_by_identifier(
-            (DOMAIN, f"{entry.entry_id}_{suffix}"),
-            entry.entry_id,
+    """Retain registry records: a failed probe never authorizes deletion."""
+    if inactive_suffixes:
+        _LOGGER.debug(
+            "Preserving registered devices/entities for unconfirmed groups: %s",
+            sorted(inactive_suffixes),
         )
-        if device is None:
-            continue
 
-        entries = er.async_entries_for_device(entity_registry, device.id)
-        if any(entity.config_entry_id != entry.entry_id for entity in entries):
-            _LOGGER.debug(
-                "Skipping cleanup for %s because foreign entities are attached",
-                suffix,
-            )
-            continue
 
-        for entity in entries:
-            entity_registry.async_remove(entity.entity_id)
+async def _async_require_setup_connection(client: WeishauptApiClient) -> None:
+    """Let HA retry setup without registering a partial inventory while offline."""
+    try:
+        connected = await client.test_connection()
+    except WeishauptApiError as err:
+        raise ConfigEntryNotReady(
+            "Weishaupt is unreachable; existing devices are retained"
+        ) from err
+    if not connected:
+        raise ConfigEntryNotReady(
+            "Weishaupt did not respond; existing devices are retained"
+        )
 
-        if not er.async_entries_for_device(entity_registry, device.id):
-            device_registry.async_remove_device(device.id)
+
+def _require_known_device_response(
+    hass: HomeAssistant, entry: ConfigEntry, suffix: str, status: str
+) -> None:
+    """A previously registered device must not disappear after a failed probe."""
+    if status == ProbeStatus.PRESENT:
+        return
+    device = dr.async_get(hass).async_get_device_by_identifier(
+        (DOMAIN, f"{entry.entry_id}_{suffix}"),
+        entry.entry_id,
+    )
+    if device is not None:
+        raise ConfigEntryNotReady(
+            f"Previously registered Weishaupt device {suffix} did not respond; retrying"
+        )
 
 
 def _entity_registry_entry_is_integration_disabled(entry: Any) -> bool:
@@ -822,6 +833,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         session=session,
     )
 
+    await _async_require_setup_connection(client)
     systable_csv = await client.fetch_systable_csv()
     _LOGGER.debug(
         "systable.csv fetch during setup: available=%s chars=%s",
@@ -859,6 +871,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     inactive_suffixes: set[str] = set()
     for circuit_number, mx in ((2, 0x01), (3, 0x02)):
         status = await _async_detect_heating_circuit(client, circuit_number, mx)
+        _require_known_device_response(
+            hass, entry, "hk" if circuit_number == 2 else "hk3", status
+        )
+        if status == ProbeStatus.UNKNOWN:
+            raise ConfigEntryNotReady(
+                f"Weishaupt HK{circuit_number} detection is inconclusive"
+            )
         if status == ProbeStatus.PRESENT:
             active_heating_circuits.append(circuit_number)
         elif status == ProbeStatus.ABSENT:
@@ -871,6 +890,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         wtc_status = await _async_detect_device_group(
             client, DEVICE_GROUP_WTC, default_on_unknown=True
         )
+    _require_known_device_response(hass, entry, "wtc", wtc_status)
     if wtc_status == ProbeStatus.PRESENT:
         active_device_groups.add(DEVICE_GROUP_WTC)
     elif wtc_status == ProbeStatus.ABSENT:
@@ -881,6 +901,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ww_status = await _async_detect_device_group(
             client, DEVICE_GROUP_WW, default_on_unknown=True
         )
+    _require_known_device_response(hass, entry, "ww", ww_status)
     if ww_status == ProbeStatus.PRESENT:
         active_device_groups.add(DEVICE_GROUP_WW)
     elif ww_status == ProbeStatus.ABSENT:
@@ -891,6 +912,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         sol_status = await _async_detect_device_group(
             client, DEVICE_GROUP_SOL, default_on_unknown=False
         )
+    _require_known_device_response(hass, entry, "sol", sol_status)
     if sol_status == ProbeStatus.PRESENT:
         active_device_groups.add(DEVICE_GROUP_SOL)
     elif sol_status == ProbeStatus.ABSENT:
@@ -927,6 +949,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for sensor_def in sensor_definitions
     ]
     network_sensor_definitions, static_data = await _async_probe_network_sensors(client)
+    _require_known_device_response(
+        hass,
+        entry,
+        NETWORK_DEVICE_SUFFIX,
+        ProbeStatus.PRESENT if network_sensor_definitions else ProbeStatus.UNKNOWN,
+    )
     if network_sensor_definitions:
         sensor_definitions.extend(network_sensor_definitions)
     else:

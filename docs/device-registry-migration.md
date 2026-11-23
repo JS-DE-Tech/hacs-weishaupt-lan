@@ -1,5 +1,7 @@
 # Home Assistant device registry API migration
 
+This document records the 0.4.7 migration. For current installation and registry-preservation behavior, see [version 0.5.1](release-0.5.1.md).
+
 ## Scope and compatibility
 
 This change only migrates device registry APIs. It does not change register
