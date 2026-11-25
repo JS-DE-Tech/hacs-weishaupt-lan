@@ -14,6 +14,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, EXPERIMENTAL_WTC_DEVICE_SUFFIX, NETWORK_DEVICE_SUFFIX
+from zoneinfo import ZoneInfo
+
+from .clock import device_timestamp
 from .coordinator import WeishauptDataUpdateCoordinator
 from .heating_circuits import (
     DEVICE_GROUP_SYSTEM,
@@ -26,7 +29,6 @@ from .heating_circuits import (
 from .parsing import (
     build_device_clock_time,
     build_device_date,
-    build_device_time_iso,
     decode_fault_status,
     decode_fault_status_attributes,
     decode_ipv4,
@@ -341,11 +343,15 @@ class WeishauptSensorEntity(
     def available(self) -> bool:
         """Return True if the sensor data is available."""
         if self._sensor_def.key == "sg_device_time":
-            required_keys = DEVICE_TIMESTAMP_KEYS
+            return super().available and self.native_value is not None
+
+        if self._sensor_def.key == "sg_device_clock_drift":
             return (
                 super().available
                 and self.coordinator.data is not None
-                and all(key in self.coordinator.data for key in required_keys)
+                and self.coordinator.data.get(
+                    self._sensor_def.key, {}
+                ).get("value_int") is not None
             )
         if self._sensor_def.key == "sg_device_date":
             return (
@@ -411,9 +417,24 @@ class WeishauptSensorEntity(
 
         # Special handling for the consolidated device time sensor
         if sensor_def.key == "sg_device_time":
-            return build_device_time_iso(
-                self._device_component_values(DEVICE_TIMESTAMP_KEYS)
+            timezone_name = getattr(
+                getattr(
+                    getattr(self.coordinator, "hass", None),
+                    "config",
+                    None,
+                ),
+                "time_zone",
+                "UTC",
             )
+            return device_timestamp(
+                self._device_component_values(DEVICE_TIMESTAMP_KEYS),
+                ZoneInfo(timezone_name),
+            )
+
+        if sensor_def.key == "sg_device_clock_drift":
+            return self.coordinator.data.get(
+                sensor_def.key, {}
+            ).get("value_int")
         if sensor_def.key == "sg_device_date":
             return build_device_date(self._device_component_values(DEVICE_DATE_KEYS))
         if sensor_def.key == "sg_device_clock_time":

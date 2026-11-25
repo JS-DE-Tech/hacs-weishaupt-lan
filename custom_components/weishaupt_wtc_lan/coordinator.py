@@ -18,6 +18,7 @@ from .api import (
     WeishauptApiError,
     WeishauptConnectionError,
 )
+from .clock import DRIFT_KEY, drift_from_results
 from .const import CMD_RESPONSE
 from .const import DOMAIN
 from .heating_circuits import build_polled_sensor_definitions
@@ -334,7 +335,9 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.debug(
                 "Skipping coordinator poll while writes are pending or settling"
             )
-            return self._cached_data()
+            cached = self._cached_data()
+            cached.pop(DRIFT_KEY, None)
+            return cached
 
         await self.async_refresh_network_diagnostics()
         params = []
@@ -386,6 +389,28 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 failed_batches,
             )
         self._last_good_dynamic_data.update(results)
+
+        # Never derive clock drift from stale component values.
+        self._last_good_dynamic_data.pop(DRIFT_KEY, None)
+
+        timezone_name = getattr(
+            getattr(getattr(self, "hass", None), "config", None),
+            "time_zone",
+            None,
+        )
+
+        if timezone_name and not failed_batches:
+            drift = drift_from_results(
+                results,
+                datetime.now(timezone.utc),
+                timezone_name,
+            )
+
+            if drift is not None:
+                self._last_good_dynamic_data[DRIFT_KEY] = {
+                    "value_int": drift,
+                    "value_hex": "",
+                }
 
         definitions_by_key = {
             sensor_def.key: sensor_def for sensor_def in self.polled_sensor_definitions

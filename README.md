@@ -759,3 +759,24 @@ Major enhancements include:
 ## License
 
 MIT
+
+
+### Device Clock Diagnostics
+
+The optional `sg_device_clock_drift` diagnostic sensor compares
+the Systemgeraet wall clock with Home Assistant's configured
+local timezone.
+
+- Positive values indicate that the device clock is ahead.
+- Negative values indicate that the device clock is behind.
+- Measurements have minute-level resolution.
+- No additional protocol requests are performed.
+- Incomplete fresh readings do not produce a drift measurement.
+- Ambiguous or nonexistent daylight-saving times are unavailable.
+- The combined device timestamp uses the configured HA timezone.
+
+This assumes the heating device uses the same local timezone
+as Home Assistant.
+
+The sensor is disabled by default. Device clock writes and
+automatic clock synchronization are not supported by this change.

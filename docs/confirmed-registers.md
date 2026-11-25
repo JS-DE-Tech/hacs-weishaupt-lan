@@ -560,3 +560,17 @@ https://github.com/kraiz/hassio-weishaupt
 
 This fork extends the original integration with additional device separation, reliability fixes, confirmed WTC values, and bundled read-only discovery tools.
 
+
+
+## Device Clock Drift Diagnostics
+
+The clock diagnostic reuses the existing SG date and time
+components at object indexes `0x2562` and `0x2563`.
+
+The CAN broadcast documented by geronet1/wem-python uses
+CAN ID `0x181` for date/time reception.
+
+These references establish read-side semantics only.
+Write access to the device clock has not been validated.
+
+No new SET requests are introduced.
