@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, EXPERIMENTAL_WTC_DEVICE_SUFFIX, NETWORK_DEVICE_SUFFIX
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .clock import device_timestamp
 from .coordinator import WeishauptDataUpdateCoordinator
@@ -426,9 +426,14 @@ class WeishauptSensorEntity(
                 "time_zone",
                 "UTC",
             )
+            try:
+                tz = ZoneInfo(timezone_name)
+            except (TypeError, ValueError, ZoneInfoNotFoundError):
+                return None
+
             return device_timestamp(
                 self._device_component_values(DEVICE_TIMESTAMP_KEYS),
-                ZoneInfo(timezone_name),
+                tz,
             )
 
         if sensor_def.key == "sg_device_clock_drift":

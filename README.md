@@ -756,11 +756,6 @@ Major enhancements include:
 - configurable polling interval
 - improved Home Assistant entity and device organization
 
-## License
-
-MIT
-
-
 ### Device Clock Diagnostics
 
 The optional `sg_device_clock_drift` diagnostic sensor compares
@@ -770,6 +765,10 @@ local timezone.
 - Positive values indicate that the device clock is ahead.
 - Negative values indicate that the device clock is behind.
 - Measurements have minute-level resolution.
+- Drift estimates use the polling window midpoint.
+- Polling windows exceeding 60 seconds are excluded.
+- Midnight and DST transition windows are excluded.
+- Small deviations may reflect polling latency.
 - No additional protocol requests are performed.
 - Incomplete fresh readings do not produce a drift measurement.
 - Ambiguous or nonexistent daylight-saving times are unavailable.
@@ -780,3 +779,7 @@ as Home Assistant.
 
 The sensor is disabled by default. Device clock writes and
 automatic clock synchronization are not supported by this change.
+
+## License
+
+MIT

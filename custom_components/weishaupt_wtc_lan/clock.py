@@ -1,7 +1,7 @@
 """Local device clock diagnostics without additional protocol reads."""
 
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 CLOCK_KEYS = (
     "sg_datum_jahr",
@@ -99,7 +99,35 @@ def drift_from_results(results, now, timezone_name):
             for key in CLOCK_KEYS
         }
         tz = ZoneInfo(timezone_name)
-    except (KeyError, TypeError, ValueError):
+    except (KeyError, TypeError, ValueError, ZoneInfoNotFoundError):
         return None
 
     return clock_drift_seconds(values, now, tz)
+
+
+def drift_from_poll_window(results, started, finished, timezone_name):
+    """Estimate drift from a bounded polling observation window."""
+    try:
+        tz = ZoneInfo(timezone_name)
+    except (TypeError, ValueError, ZoneInfoNotFoundError):
+        return None
+
+    elapsed = (finished - started).total_seconds()
+
+    if not 0 <= elapsed <= 60:
+        return None
+
+    local_start = started.astimezone(tz)
+    local_finish = finished.astimezone(tz)
+
+    if local_start.date() != local_finish.date():
+        return None
+
+    if local_start.utcoffset() != local_finish.utcoffset():
+        return None
+
+    midpoint = started + (finished - started) / 2
+
+    return drift_from_results(
+        results, midpoint, timezone_name
+    )

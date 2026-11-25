@@ -18,7 +18,7 @@ from .api import (
     WeishauptApiError,
     WeishauptConnectionError,
 )
-from .clock import DRIFT_KEY, drift_from_results
+from .clock import DRIFT_KEY, drift_from_poll_window
 from .const import CMD_RESPONSE
 from .const import DOMAIN
 from .heating_circuits import build_polled_sensor_definitions
@@ -264,7 +264,9 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "value_int": queued.value_int,
         }
         self._last_good_dynamic_data[queued.key] = data
+        self._last_good_dynamic_data.pop(DRIFT_KEY, None)
         updated = {**(getattr(self, "data", None) or {}), queued.key: data}
+        updated.pop(DRIFT_KEY, None)
         set_updated_data = getattr(self, "async_set_updated_data", None)
         if set_updated_data is not None:
             set_updated_data(updated)
@@ -335,6 +337,7 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.debug(
                 "Skipping coordinator poll while writes are pending or settling"
             )
+            self._last_good_dynamic_data.pop(DRIFT_KEY, None)
             cached = self._cached_data()
             cached.pop(DRIFT_KEY, None)
             return cached
@@ -376,7 +379,9 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
 
         try:
+            poll_started = datetime.now(timezone.utc)
             results = await self.client.read_parameters(params)
+            poll_finished = datetime.now(timezone.utc)
         except WeishauptConnectionError as err:
             raise UpdateFailed(f"Connection error: {err}") from err
         except WeishauptApiError as err:
@@ -400,9 +405,10 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
 
         if timezone_name and not failed_batches:
-            drift = drift_from_results(
+            drift = drift_from_poll_window(
                 results,
-                datetime.now(timezone.utc),
+                poll_started,
+                poll_finished,
                 timezone_name,
             )
 

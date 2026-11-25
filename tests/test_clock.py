@@ -3,7 +3,7 @@
 import importlib.util
 import unittest
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -140,6 +140,54 @@ class ClockTests(unittest.TestCase):
         self.assertIsNone(
             clock.drift_from_results(data, now, "Europe/Berlin")
         )
+
+
+class PollWindowTests(unittest.TestCase):
+
+    def setUp(self):
+        self.data = {
+            key: {"value_int": value}
+            for key, value in values().items()
+        }
+        self.start = datetime(
+            2026, 11, 26, 11, 0, tzinfo=timezone.utc
+        )
+
+    def estimate(self, start, seconds, tz="Europe/Berlin"):
+        return clock.drift_from_poll_window(
+            self.data,
+            start,
+            start + timedelta(seconds=seconds),
+            tz,
+        )
+
+    def test_normal_poll_window(self):
+        self.assertEqual(self.estimate(self.start, 20), 0)
+
+    def test_excessive_poll_duration(self):
+        self.assertIsNone(self.estimate(self.start, 90))
+
+    def test_invalid_timezone(self):
+        self.assertIsNone(
+            self.estimate(self.start, 0, "Invalid/Timezone")
+        )
+
+    def test_backward_system_clock(self):
+        self.assertIsNone(self.estimate(self.start, -10))
+
+    def test_midnight_poll_window(self):
+        start = datetime(
+            2026, 11, 25, 22, 59, 50,
+            tzinfo=timezone.utc,
+        )
+        self.assertIsNone(self.estimate(start, 20))
+
+    def test_dst_transition_poll_window(self):
+        start = datetime(
+            2026, 3, 29, 0, 59, 50,
+            tzinfo=timezone.utc,
+        )
+        self.assertIsNone(self.estimate(start, 20))
 
 
 if __name__ == "__main__":
