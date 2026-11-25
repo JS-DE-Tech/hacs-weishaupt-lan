@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import importlib.util
 import copy
 import itertools
@@ -535,7 +537,9 @@ class SensorEntityTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(date_entity.native_value, "11.06.2026")
         self.assertEqual(clock_entity.native_value, "22:26")
-        self.assertEqual(timestamp_entity.native_value, "2026-06-11T22:26:00+00:00")
+        self.assertEqual(timestamp_entity.native_value, datetime.fromisoformat("2026-06-11T22:26:00+00:00"))
+        self.assertIsInstance(timestamp_entity.native_value, datetime)
+        self.assertIsNotNone(timestamp_entity.native_value.utcoffset())
 
     def test_invalid_derived_date_is_unavailable(self) -> None:
         """Invalid component combinations should make the derived date unavailable."""

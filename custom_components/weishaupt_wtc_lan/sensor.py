@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import logging
 from typing import Any
 
@@ -431,9 +433,14 @@ class WeishauptSensorEntity(
             except (TypeError, ValueError, ZoneInfoNotFoundError):
                 return None
 
-            return device_timestamp(
+            timestamp = device_timestamp(
                 self._device_component_values(DEVICE_TIMESTAMP_KEYS),
                 tz,
+            )
+            return (
+                datetime.fromisoformat(timestamp)
+                if timestamp is not None
+                else None
             )
 
         if sensor_def.key == "sg_device_clock_drift":
