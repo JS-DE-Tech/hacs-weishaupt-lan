@@ -768,9 +768,17 @@ local timezone.
 - Drift estimates use the polling window midpoint.
 - Polling windows exceeding 60 seconds are excluded.
 - Midnight and DST transition windows are excluded.
-- Small deviations may reflect polling latency.
+- Small deviations may reflect polling latency, minute-level
+  quantization, or delayed device register updates.
+- Reported offsets of up to one minute should not be interpreted
+  as precise second-level clock drift.
 - No additional protocol requests are performed.
-- Incomplete fresh readings do not produce a drift measurement.
+- Incomplete fresh clock readings do not produce a drift measurement.
+- Unrelated failed read batches do not suppress clock diagnostics
+  when all five clock components were successfully read.
+- Cached clock components are never used to calculate a fresh
+  drift measurement.
+- Drift availability is restored after a subsequent valid poll.
 - Ambiguous or nonexistent daylight-saving times are unavailable.
 - The combined device timestamp uses the configured HA timezone.
 

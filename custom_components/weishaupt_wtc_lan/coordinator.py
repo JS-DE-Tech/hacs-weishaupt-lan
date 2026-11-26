@@ -404,7 +404,9 @@ class WeishauptDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             None,
         )
 
-        if timezone_name and not failed_batches:
+        # Unrelated failed batches must not suppress clock diagnostics.
+        # The clock helper requires all five fresh clock components.
+        if timezone_name:
             drift = drift_from_poll_window(
                 results,
                 poll_started,

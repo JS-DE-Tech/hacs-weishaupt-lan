@@ -517,6 +517,159 @@ class IntegrationHelperTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(first[sensor_def.key]["value_int"], 2)
         self.assertEqual(second[sensor_def.key]["value_int"], 2)
 
+    def _make_clock_coordinator(self, responses, timezone_name="Europe/Berlin"):
+        """Create a coordinator with deterministic clock test data."""
+        hass = SimpleNamespace(
+            config=SimpleNamespace(time_zone=timezone_name)
+        )
+
+        clock_keys = (
+            "sg_datum_jahr",
+            "sg_datum_monat",
+            "sg_datum_tag",
+            "sg_uhrzeit_stunden",
+            "sg_uhrzeit_minuten",
+        )
+
+        coordinator = integration.WeishauptDataUpdateCoordinator(
+            hass=hass,
+            client=SequenceReadClient(responses),
+            sensor_definitions=[
+                sensor_definition_by_key(key)
+                for key in clock_keys
+            ],
+        )
+
+        # The lightweight HA coordinator stub does not store hass.
+        coordinator.hass = hass
+
+        return coordinator
+
+    def _clock_read_results(self):
+        """Return a complete set of fresh clock registers."""
+        values = {
+            "sg_datum_jahr": 26,
+            "sg_datum_monat": 11,
+            "sg_datum_tag": 26,
+            "sg_uhrzeit_stunden": 12,
+            "sg_uhrzeit_minuten": 0,
+        }
+
+        return {
+            key: {
+                "value_int": value,
+                "value_hex": f"{value:02x}",
+            }
+            for key, value in values.items()
+        }
+
+    async def _poll_clock_at_fixed_time(self, coordinator):
+        """Run a deterministic coordinator poll."""
+        from unittest.mock import patch
+
+        reference = datetime(
+            2026, 11, 26, 11, 0, 30,
+            tzinfo=timezone.utc,
+        )
+
+        with patch.object(coordinator_module, "datetime") as mocked:
+            mocked.now.return_value = reference
+            return await coordinator._async_update_data()
+
+    async def test_clock_drift_survives_unrelated_batch_failure(self):
+        """Complete fresh clock data survives unrelated batch failures."""
+        coordinator = self._make_clock_coordinator([
+            (self._clock_read_results(), 1),
+        ])
+
+        result = await self._poll_clock_at_fixed_time(coordinator)
+
+        self.assertEqual(
+            result["sg_device_clock_drift"]["value_int"],
+            0,
+        )
+
+    async def test_clock_drift_never_uses_cached_components(self):
+        """Missing fresh components must invalidate cached drift."""
+        complete = self._clock_read_results()
+        incomplete = dict(complete)
+        incomplete.pop("sg_uhrzeit_minuten")
+
+        coordinator = self._make_clock_coordinator([
+            (complete, 0),
+            (incomplete, 1),
+        ])
+
+        first = await self._poll_clock_at_fixed_time(coordinator)
+        second = await self._poll_clock_at_fixed_time(coordinator)
+
+        self.assertIn("sg_device_clock_drift", first)
+        self.assertIn("sg_uhrzeit_minuten", second)
+        self.assertNotIn("sg_device_clock_drift", second)
+
+    async def test_clock_drift_recovers_after_incomplete_poll(self):
+        """Fresh clock data should restore drift availability."""
+        complete = self._clock_read_results()
+        incomplete = dict(complete)
+        incomplete.pop("sg_datum_tag")
+
+        coordinator = self._make_clock_coordinator([
+            (complete, 0),
+            (incomplete, 0),
+            (complete, 0),
+        ])
+
+        first = await self._poll_clock_at_fixed_time(coordinator)
+        second = await self._poll_clock_at_fixed_time(coordinator)
+        third = await self._poll_clock_at_fixed_time(coordinator)
+
+        self.assertIn("sg_device_clock_drift", first)
+        self.assertNotIn("sg_device_clock_drift", second)
+
+        self.assertEqual(
+            third["sg_device_clock_drift"]["value_int"],
+            0,
+        )
+
+    async def test_clock_drift_removed_while_writes_pending(self):
+        """Cached drift must not survive a write protection window."""
+        from unittest.mock import AsyncMock, patch
+
+        coordinator = self._make_clock_coordinator([
+            (self._clock_read_results(), 0),
+        ])
+
+        first = await self._poll_clock_at_fixed_time(coordinator)
+
+        self.assertIn("sg_device_clock_drift", first)
+
+        coordinator.data = first
+
+        with patch.object(
+            coordinator,
+            "_writes_pending_or_settling",
+            new=AsyncMock(return_value=True),
+        ):
+            result = await coordinator._async_update_data()
+
+        self.assertNotIn("sg_device_clock_drift", result)
+
+        self.assertNotIn(
+            "sg_device_clock_drift",
+            coordinator._last_good_dynamic_data,
+        )
+
+    async def test_clock_drift_invalid_timezone_is_unavailable(self):
+        """An invalid configured timezone must not produce drift."""
+        coordinator = self._make_clock_coordinator(
+            [(self._clock_read_results(), 0)],
+            timezone_name="Invalid/Timezone",
+        )
+
+        result = await self._poll_clock_at_fixed_time(coordinator)
+
+        self.assertNotIn("sg_device_clock_drift", result)
+
     async def test_probe_experimental_registers_keeps_only_supported_candidates(self) -> None:
         """Setup probe should keep CMD_RESPONSE candidates and skip errors."""
         supported = {
