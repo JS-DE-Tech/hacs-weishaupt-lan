@@ -756,6 +756,38 @@ Major enhancements include:
 - configurable polling interval
 - improved Home Assistant entity and device organization
 
+### Device Clock Diagnostics
+
+The optional `sg_device_clock_drift` diagnostic sensor compares
+the Systemgeraet wall clock with Home Assistant's configured
+local timezone.
+
+- Positive values indicate that the device clock is ahead.
+- Negative values indicate that the device clock is behind.
+- Measurements have minute-level resolution.
+- Drift estimates use the polling window midpoint.
+- Polling windows exceeding 60 seconds are excluded.
+- Midnight and DST transition windows are excluded.
+- Small deviations may reflect polling latency, minute-level
+  quantization, or delayed device register updates.
+- Reported offsets of up to one minute should not be interpreted
+  as precise second-level clock drift.
+- No additional protocol requests are performed.
+- Incomplete fresh clock readings do not produce a drift measurement.
+- Unrelated failed read batches do not suppress clock diagnostics
+  when all five clock components were successfully read.
+- Cached clock components are never used to calculate a fresh
+  drift measurement.
+- Drift availability is restored after a subsequent valid poll.
+- Ambiguous or nonexistent daylight-saving times are unavailable.
+- The combined device timestamp uses the configured HA timezone.
+
+This assumes the heating device uses the same local timezone
+as Home Assistant.
+
+The sensor is disabled by default. Device clock writes and
+automatic clock synchronization are not supported by this change.
+
 ## License
 
 MIT
