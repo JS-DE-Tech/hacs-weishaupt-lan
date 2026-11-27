@@ -24,7 +24,9 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 REQUEST_ID = "12345678"
-MAX_PARAMS_PER_REQUEST = 6
+# Some WEM-SG installations consistently reject the sixth
+# parameter in a read batch. Limit batches to five parameters.
+MAX_PARAMS_PER_REQUEST = 5
 MIN_REQUEST_GAP_SECONDS = 0.3
 SYSTABLE_PATH = "/sd/systable.csv"
 
