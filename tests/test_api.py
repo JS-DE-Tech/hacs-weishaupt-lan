@@ -211,8 +211,8 @@ class ApiClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(sleeps[0], 0)
         self.assertLessEqual(sleeps[0], 0.02)
 
-    async def test_read_parameters_splits_batches_at_six_dense_frames(self) -> None:
-        """Read batches should contain no more than six densely numbered frames."""
+    async def test_read_parameters_splits_batches_at_five_dense_frames(self) -> None:
+        """Read batches should contain no more than five densely numbered frames."""
         requested = params(7)
         client = SequenceResponseClient(
             [
@@ -227,20 +227,21 @@ class ApiClientTests(unittest.IsolatedAsyncioTestCase):
                             int(param["vs"]),
                             2,
                         )
-                        for param in requested[:6]
+                        for param in requested[:5]
                     ]
                 ),
                 capi_batch_response(
                     [
                         vg_with_value(
                             api.CMD_RESPONSE,
-                            int(requested[6]["mi"]),
-                            int(requested[6]["mx"]),
-                            int(requested[6]["ox"]),
-                            int(requested[6]["os"]),
-                            int(requested[6]["vs"]),
+                            int(param["mi"]),
+                            int(param["mx"]),
+                            int(param["ox"]),
+                            int(param["os"]),
+                            int(param["vs"]),
                             2,
                         )
+                        for param in requested[5:]
                     ]
                 ),
             ]
@@ -249,15 +250,15 @@ class ApiClientTests(unittest.IsolatedAsyncioTestCase):
         result = await client.read_parameters(requested)
 
         self.assertEqual(len(result), 7)
-        self.assertEqual(client.payloads[0]["CAPI"]["NN"], 6)
-        self.assertEqual(client.payloads[1]["CAPI"]["NN"], 1)
+        self.assertEqual(client.payloads[0]["CAPI"]["NN"], 5)
+        self.assertEqual(client.payloads[1]["CAPI"]["NN"], 2)
         self.assertEqual(
             [key for key in client.payloads[0]["CAPI"] if key.startswith("N")],
-            ["NN", "N01", "N02", "N03", "N04", "N05", "N06"],
+            ["NN", "N01", "N02", "N03", "N04", "N05"],
         )
         self.assertEqual(
             [key for key in client.payloads[1]["CAPI"] if key.startswith("N")],
-            ["NN", "N01"],
+            ["NN", "N01", "N02"],
         )
 
     async def test_cmd_error_does_not_discard_valid_frames_or_zero(self) -> None:
@@ -271,7 +272,12 @@ class ApiClientTests(unittest.IsolatedAsyncioTestCase):
             vg_with_value(api.CMD_RESPONSE, 0x09, 0x01, 0x2604, 0x02, 2, 1),
             vg_with_value(api.CMD_RESPONSE, 0x09, 0x01, 0x2605, 0x02, 2, 2),
         ]
-        client = SequenceResponseClient([capi_batch_response(response_frames)])
+        client = SequenceResponseClient(
+            [
+                capi_batch_response(response_frames[:5]),
+                capi_batch_response(response_frames[5:]),
+            ]
+        )
 
         result = await client.read_parameters(requested)
 
@@ -279,6 +285,9 @@ class ApiClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["key_0"]["value_int"], 149)
         self.assertEqual(result["key_2"]["value_int"], 0)
         self.assertEqual(result["key_3"]["value_int"], 597)
+        self.assertEqual(result["key_4"]["value_int"], 1)
+        self.assertEqual(result["key_5"]["value_int"], 2)
+        self.assertEqual(len(result), 5)
 
     async def test_read_string_parameter_decodes_supported_device_name(self) -> None:
         """String read should decode a supported NUL-terminated device name."""
